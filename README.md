@@ -54,7 +54,7 @@ cem-logistica/
 
 ```bash
 git clone https://github.com/tu_usuario/cem-logistica.git
-cd incubant_web
+cd cem-logistica
 ```
 
 2. Instala y ejecuta el **Frontend**:
