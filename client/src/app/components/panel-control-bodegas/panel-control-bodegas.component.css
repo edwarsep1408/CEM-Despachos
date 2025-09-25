@@ -1,0 +1,100 @@
+.title {
+  padding-bottom: 20px;
+}
+
+.rowSpaces {
+  padding: 20px;
+}
+
+.chart-container {
+  width: 100%;
+  height: 10%;
+}
+
+.productsSinInventario {
+  padding-top: 25px;
+  padding-bottom: 25px;
+}
+
+.card {
+  transition: transform 0.2s ease-in-out;
+}
+
+/* 
+  .card:hover {
+    transform: scale(1.05); 
+  } */
+
+.card-body {
+  padding: 20px;
+}
+
+.listBtns {
+  list-style: none;
+}
+
+.ulList {
+  padding-bottom: 10px;
+}
+
+.productosConInventario {
+  padding-top: 20px;
+}
+
+.hover-shadow {
+  transition: all 0.3s ease;
+}
+
+.hover-shadow:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.section-title {
+  font-weight: 600;
+  font-size: 1.4rem;
+  color: #343a40;
+  display: flex;
+  align-items: center;
+}
+
+.styled-table {
+  width: 100%;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mat-header-cell {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.mat-cell,
+.mat-header-cell {
+  padding: 14px 12px;
+}
+
+.mat-row:nth-child(even) {
+  background-color: #f4f6f8;
+}
+
+.hover-row:hover {
+  background-color: #e3f2fd;
+  transition: background-color 0.3s ease;
+}
+
+.sticky-header {
+  position: sticky;
+  top: 0;
+  background-color: white;
+  z-index: 1;
+}
+
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}

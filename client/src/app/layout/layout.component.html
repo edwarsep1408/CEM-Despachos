@@ -1,0 +1,134 @@
+<div class="layout has-sidebar fixed-sidebar fixed-header">
+  <aside id="sidebar" class="sidebar break-point-sm has-bg-image collapsed">
+    <div class="image-wrapper">
+      <img src="../../assets/img/LOGOTIPO.svg" alt="sidebar background" />
+    </div>
+    <div class="sidebar-layout">
+      <div class="sidebar-header">
+        <div class="pro-sidebar-logo">
+          <img src="../../assets/img/logopollocoa.png" alt="" class="logoSideBar">
+        </div>
+      </div>
+      <div class="sidebar-content">
+        <nav class="menu open-current-submenu">
+          <ul>
+
+            <li class="menu-header" style="padding-top: 20px">
+              <span> Menú </span>
+            </li>
+
+            <li class="menu-item">
+              <a [routerLink]="'/configuracion/dashboard'">
+                <span class="menu-icon">
+                  <i class="bi bi-speedometer2"></i>
+                </span>
+                <span class="menu-title">Dashboard</span>
+              </a>
+            </li>
+
+            <li class="menu-item">
+              <a [routerLink]="'/configuracion/inventarioTotalCompania'">
+                <span class="menu-icon">
+                  <i class="bi bi-arrow-clockwise spinning"></i>
+                </span>
+                <span class="menu-title">Inventario compañía</span>
+              </a>
+            </li>
+
+            <li class="menu-item">
+              <a [routerLink]="'/configuracion/dashboardBodegas'">
+                <span class="menu-icon">
+                  <i class="bi bi-grid-3x3"></i>
+                </span>
+                <span class="menu-title">Inventario bodegas </span>
+              </a>
+            </li>
+
+            <li class="menu-item">
+              <a [routerLink]="'/configuracion/reporteBodega'">
+                <span class="menu-icon">
+                  <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+                </span>
+                <span class="menu-title">Reportes</span>
+              </a>
+            </li>
+
+            <li class="menu-item">
+              <a [routerLink]="'/gestionarInventario'">
+                <span class="menu-icon">
+                  <i class="bi bi-ui-checks-grid"></i>
+                </span>
+                <span class="menu-title">Inventario</span>
+              </a>
+            </li>
+
+            <li class="menu-item">
+              <a [routerLink]="'/configuracion/items'">
+                <span class="menu-icon">
+                  <i class="bi bi-list-check"></i>
+                </span>
+                <span class="menu-title">Items</span>
+              </a>
+            </li>
+            
+            <li class="menu-item">
+              <a [routerLink]="'/configuracion/bodegas'">
+                <span class="menu-icon">
+                  <i class="bi bi-house-gear"></i>
+                </span>
+                <span class="menu-title">Bodegas</span>
+              </a>
+            </li>
+
+            <li class="menu-item">
+              <a [routerLink]="'/configuracion/mesas'">
+                <span class="menu-icon">
+                  <i class="bi bi-file-spreadsheet-fill"></i>
+                </span>
+                <span class="menu-title">Mesas</span>
+              </a>
+            </li>
+
+            <li class="menu-item">
+              <a [routerLink]="'/configuracion/colaboradores'">
+                <span class="menu-icon">
+                  <i class="bi bi-person-video2"></i>
+                </span>
+                <span class="menu-title">Colaboradores</span>
+              </a>
+            </li>
+            
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </aside>
+  <div id="overlay" class="overlay" (click)="toggleOverlay()"></div>
+  <div class="layout">
+    <nav class="navbar bg-body-tertiary">
+      <div class="container-fluid">
+        <a id="btn-collapse" class="nav-link" (click)="toggleSidebar()">
+          <i class="bi bi-list"></i>
+        </a>
+        <div class="nav-item dropdown">
+          <a class="btn dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="../../../assets/img/logopollocoa.png" alt="logo" class="logo-dropdown" />
+            <!-- {{identity.nombre}} -->
+          </a>
+
+          <ul class="dropdown-menu">
+            <li>
+              <a class="dropdown-item" href="/"><i class="bi bi-door-open-fill"></i> Regresar al inicio</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+
+    <div class="overlay"></div>
+    
+  </div>
+</div>

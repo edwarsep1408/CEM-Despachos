@@ -1,0 +1,70 @@
+<div class="content-title">
+    <div class="col-mb-6">
+      <h3>Módulo Revisoría Fiscal</h3>
+    </div>
+    <div class="row">
+      <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <div class="col col-sm-12 col-md-5 col-lg-5 col-xl-5">
+          <div class="input-group input-search">
+            <div class="form-floating">
+              <select
+                class="form-select"
+                id="floatingSelect"
+                aria-label="Floating label select example"
+                (change)="OnGetFilter($event)"
+              >
+                <option selected disabled>Seleccione una bodega</option>
+                <option *ngFor="let item of bodegas" [value]="item._id">
+                  {{ item.codigo }}-{{ item.nombre }}
+                </option>
+              </select>
+              <label for="floatingSelect">Bodega</label>
+            </div>
+          </div>
+        </div>
+  
+        <div class="col col-sm-12 col-md-5 col-lg-5 col-xl-5">
+          <div class="input-group input-search">
+            <div class="form-floating">
+              <select
+                class="form-select"
+                id="planilla"
+                aria-label="Floating label select example"
+                (change)="GetPlanilla($event)"
+                [(ngModel)]="inventarioSeleccionado"
+                [compareWith]="compareFn"
+              >
+                <option selected>Seleccione una opción</option>
+                <option
+                  *ngFor="let coleccion of fechasInventarioPorBodega"
+                  [ngValue]="coleccion"
+                  [attr.data-coleccion]="coleccion | json"
+                >
+                  {{ coleccion.fecha_formateada }}
+                </option>
+              </select>
+              <label for="floatingSelect">Fecha inventario</label>
+            </div>
+          </div>
+        </div>
+        <div class="col col-sm-12 col-md-2 col-lg-2 col-xl-2 pt-1">
+          <div class="input-group input-search">
+            <button
+              type="button"
+              class="btn btn-primary"
+              id="filtrarInventario"
+              (click)="filtarInventario()"
+              [disabled]="!isButtonEnabled"
+            >
+              FILTRAR INVENTARIO
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  
+  
+  
+  

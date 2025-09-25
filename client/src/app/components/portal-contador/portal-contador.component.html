@@ -1,0 +1,295 @@
+<div class="conten">
+  <div class="container">
+    <div class="row">
+      <div class="col-6">
+        <div class="container-perfil">
+          <div class="card card-perfil-img">
+            <img src="../../../assets/img/g584.png" alt="" class="img-perfil">
+          </div>
+          <div class="card card-info-perfil" *ngIf="colaboradorData">
+
+            <h6><strong>{{colaboradorData.nombre}}</strong> </h6>
+            <small class="text-muted">Digitador</small>
+
+
+          </div> 
+        </div>
+      </div>
+
+      <div class="col-6">
+        <div class="container mt-3">
+          <div class="d-flex justify-content-end">
+            <a [routerLink]="'/'" class="btn btn-white" data-bs-toggle="modal" data-bs-target="#configModal"
+              (click)="backInicio()">
+              <i class="bi bi-arrow-left"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+
+    <div class="row">
+      <div class="col-5">
+        <div class="card card-info">
+          <h5><strong>INFORMACIÓN CONTEO</strong></h5>
+
+          <div class="card card-content-info" *ngIf="planillaData">
+            <div class="row row-datils">
+              <div class="container-icon">
+                <i class="bi bi-card-checklist"></i>
+              </div>
+              <div class="text">
+                <h6><strong>N° de Planilla</strong></h6>
+                <p id="nombre_cont" name="nombre_cont">#{{planillaData.numero_planilla}}</p>
+
+              </div>
+            </div>
+
+          </div>
+
+          <div class="card card-content-info mt-2" *ngIf="conteoData">
+            <div class="row row-datils">
+              <div class="container-icon">
+                <i class="bi bi-list-ol"></i>
+              </div>
+              <div class="text">
+                <h6><strong>N° de Pesaje</strong></h6>
+                <p id="nombre_cont" name="nombre_cont">#{{conteoData.numero_conteo}}</p>
+
+              </div>
+            </div>
+
+          </div>
+          <div class="card card-content-info mt-2" *ngIf="itemProductoData">
+            <div class="row row-datils">
+              <div class="container-icon">
+                <i class="bi bi-boxes"></i>
+              </div>
+              <div class="text">
+                <h6><strong>Producto</strong></h6>
+                <p id="nombre_cont" name="nombre_cont">{{itemProductoData.descripcion}}</p>
+              </div>
+            </div>
+          </div>
+          <div class="card card-content-info mt-2" *ngIf="itemProductoData">
+            <div class="row row-datils">
+              <div class="container-icon">
+                <i class="bi bi-gear-wide-connected"></i>
+              </div>
+              <div class="text">
+                <h6><strong>Referencia Producto</strong></h6>
+                <p id="nombre_cont" name="nombre_cont">{{itemProductoData.referencia}}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-content-info mt-2" *ngIf="mesaData">
+            <div class="row row-datils">
+              <div class="container-icon">
+                <i class="bi bi-file-spreadsheet"></i>
+              </div>
+              <div class="text">
+                <h6><strong>Mesa</strong></h6>
+                <p id="nombre_cont" name="nombre_cont">{{mesaData.nombre}}</p>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <div class="col-7">
+        <div class="card card-formulario" *ngIf="conteoData && selectedProducto">
+          <div class="row text-center">
+            <div class="col-6">
+              <p class="text-muted">Producto</p>
+              <h6><Strong>{{selectedProducto.descripcion}}</Strong></h6>
+            </div>
+            <div class="col-6">
+              <p class="text-muted">Referencia</p>
+              <h6><strong>{{selectedProducto.referencia}}</strong></h6>
+            </div>
+          </div>
+          <button class="btn btn-secondary" (click)="cancelSelectedItem()">
+            Cancelar
+          </button>
+        </div>
+        <div class="card card-formulario mt-3" *ngIf="conteoData && selectedProducto">
+
+          <h5><strong>FORMULARIO</strong></h5>
+
+          <form (ngSubmit)="OnSubmitConteo()" [formGroup]="miFormulario">
+
+            <div class="form-floating mb-3">
+              <input type="number" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_canastas')}"  min="0"
+                formControlName="numero_canastas" name="numero_canastas" id="floatingInput" #numeroCanastasInput placeholder="nombre"
+                autocomplete="off" required >
+              <label for="floatingInput">Número Canastas</label>
+              <div *ngIf="miFormulario.get('numeroEntero')?.errors?.['decimal']">No se permiten valores decimales.</div>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="number" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_canastillas')}" min="0"
+                formControlName="numero_canastillas" name="numero_canastillas" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Número Canastillas</label>
+              <div *ngIf="miFormulario.get('numeroEntero')?.errors?.['decimal']">No se permiten valores decimales.</div>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="number" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_bultos')}" min="0"
+                formControlName="numero_bultos" name="numero_bultos" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Número Bultos</label>
+              <div *ngIf="miFormulario.get('numeroEntero')?.errors?.['decimal']">No se permiten valores decimales.</div>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="number" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_cajas')}" min="0"
+                formControlName="numero_cajas" name="numero_cajas" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Número Cajas</label>
+              <div *ngIf="miFormulario.get('numeroEntero')?.errors?.['decimal']">No se permiten valores decimales.</div>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="number" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('carreta')}" min="0"
+                formControlName="carreta" name="carreta" id="floatingInput" placeholder="nombre" autocomplete="off"
+                required>
+              <label for="floatingInput">Carreta</label>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="number" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('kg_pesados')}" min="0"
+                formControlName="kg_pesados" name="kg_pesados" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">KG Pesados</label>
+            </div>
+
+            <div class="form-floating mb-4">
+              <input type="number" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('unidades_contadas')}" min="0"
+                formControlName="unidades_contadas" name="unidades_contadas" id="floatingInput" placeholder="nombre" min="0"
+                autocomplete="off" required>
+              <label for="floatingInput">Unidades Contadas</label>
+              <div *ngIf="miFormulario.get('numeroEntero')?.errors?.['decimal']">No se permiten valores decimales.</div>
+            </div>
+
+            <div class="row">
+              <div class="col-5">
+                <button type="submit" class="btn btn-primary "
+                  [disabled]="miFormulario.pristine || miFormulario.invalid || btnSubmitFormulario">Guardar Datos</button>
+              </div>
+              <div class="col-5 d-flex justify-content-end">
+                <button type="button" class="btn btn-secondary" (click)="resetForm()">Cancelar</button>
+              </div>
+            </div>
+
+          </form>
+
+        </div>
+        <div class="card card-formulario" *ngIf="!selectedProducto && planillaData">
+          <h5><strong>Buscar referencia</strong></h5>
+          <div class="input-group mb-3">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <div class="form-floating">
+              <input type="text" class="form-control" name="buscar" id="floatingInput" placeholder="Buscar"
+                autocomplete="off" (keyup)="searchItems($event)" required autofocus>
+              <label for="floatingInput">Buscar Item</label>
+
+            </div>
+
+          </div>
+          <div style="font-size: .875em;">
+            Por favor, ingresa al menos 3 caracteres.
+          </div>
+
+          <div class="mb-3 mt-3" *ngIf="itemsData.length != 0">
+            <h5>Productos</h5>
+            <cdk-virtual-scroll-viewport itemSize="50" class="example-viewport">
+              <div class="card" style="margin-bottom: 20px;" *cdkVirtualFor="let item of itemsData">
+                <div class="card-body">
+                  <td class="td-info">
+                    <div class="content-ilustration">
+                      <div class="ilustration">
+                        <i class="bi bi-box"></i>
+                      </div>
+                      {{item.descripcion}}
+                    </div>
+                  </td>
+                  <td class="td-info">
+                    <div class="v-separator"></div>
+                  </td>
+                  <td class="td-info">Referencia: {{item.referencia}}</td>
+                  <td class="td-info">
+                    <div class="v-separator"></div>
+                  </td>
+                  <td class="td-info">Código: {{item.codigoItem}}</td>
+                  <td class="td-info">
+                    <div class="v-separator"></div>
+                  </td>
+                  <td class="td-info">
+                    <button class="btn btn-sm btn-outline-primary" (click)=" selectedItem(item)">
+                      <i class="bi bi-plus-circle-fill"></i>
+                    </button>
+                  </td>
+                </div>
+              </div>
+            </cdk-virtual-scroll-viewport>
+
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+</div>
+
+
+<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+  aria-labelledby="staticBackdropLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="staticBackdropLabel">Firma</h1>
+      </div>
+      <div class="modal-body">
+        <canvas #signature class="SignaturePad" width="466" height="150" tabindex="0" (mouseleave)="onSignatureEnd()"
+          (touchend)="onSignatureEnd()"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" *ngIf="isDrawing" (click)="onSignatureClear()">Limpiar</button>
+        <button type="button" class="btn btn-primary" (click)="onSubmitSign()">Firmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="diferenciaModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+  aria-labelledby="staticBackdropLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="title-icon mx-auto text-center">
+          <i class="bi bi-exclamation-diamond-fill"></i>
+        </div>
+        <div class="title-icon mx-auto text-center">
+          <h3>Diferencia detectada</h3>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <h6 style="text-align: center;">Por favor, busque y notifique al coordinador. Se ha identificado una discrepancia en este inventario.</h6>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

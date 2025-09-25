@@ -1,0 +1,9 @@
+.revisoriaFiscalForm{
+    padding-top: 10%;
+}
+.btnFiltrarInventario{
+    margin-bottom: 5px;
+    height: 33px;
+    border-radius: 2px;
+    margin-top: 0px !important;
+}

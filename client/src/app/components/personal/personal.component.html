@@ -1,0 +1,207 @@
+<div class="content-title">
+
+  <div class="col-mb-6">
+    <h3>Colaboradores</h3>
+  </div>
+
+  <div class=" col-mb-6 d-grid gap-2 d-md-flex justify-content-md-end">
+    <div class="input-group input-search">
+      <span class="input-group-text search-icon" id="basic-addon2">
+        <i class="ri-search-line"></i>
+      </span>
+      <input type="text" class="form-control search-input" (keyup)="applyFilter($event)" placeholder="Buscar"
+        aria-label="Buscar" name="buscar" aria-describedby="basic-addon2">
+    </div>
+    <button type="button" class="btn btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight"
+      (click)=" onGetBodega()" aria-controls="offcanvasRight"> <i class="ri-add-circle-fill"></i> Nuevo
+      colaborador</button>
+  </div>
+</div>
+
+<div class="mat-elevation-z4">
+  <table mat-table [dataSource]="dataSource" matSort>
+    <ng-container matColumnDef="nombre">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>NOMBRE</th>
+      <td mat-cell *matCellDef="let element">
+        <div class="content-ilustration">
+          <div class="ilustration">
+            <i class="bi bi-box"></i>
+          </div>
+
+          {{element.nombre || ""}}
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="cedula">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>CÉDULA</th>
+      <td mat-cell *matCellDef="let element"> {{element.cedula}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="perfil">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>PERFIL</th>
+      <td mat-cell *matCellDef="let element"> {{element.perfil}} </td>
+    </ng-container>
+    <ng-container matColumnDef="bodega">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>BODEGA</th>
+      <td mat-cell *matCellDef="let element"> {{element.bodega.nombre}} - {{element.bodega.codigo}}</td>
+    </ng-container>
+    <ng-container matColumnDef="mesa">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>MESA</th>
+      <td mat-cell *matCellDef="let element"> {{element.mesa.nombre || ""}} </td>
+    </ng-container>
+    <ng-container matColumnDef="acciones">
+      <th mat-header-cell *matHeaderCellDef> ACCIONES </th>
+      <td mat-cell *matCellDef="let element">
+        <button class="btn btn-edit" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRightEdit"
+          aria-controls="offcanvasRightEdit" (click)="onClickDato(element); onGetBodega()">
+          <i class="bi bi-pencil-square"></i>
+        </button>
+        <button class="btn btn-delete" (click)="onDelete(element._id)">
+          <i class="bi bi-trash3-fill"></i>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+
+  <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page of periodic elements">
+  </mat-paginator>
+</div>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+  <form (submit)="onSubmit()" #AddForm="ngForm" method="post">
+    <div class="offcanvas-header">
+      <h6 class="offcanvas-title" id="offcanvasRightLabel">Información Colaborador</h6>
+    </div>
+
+    <div class="offcanvas-body">
+
+      <div class="form-floating mb-3">
+        <select class="form-select" id="floatingSelect" [(ngModel)]='addForm.bodega' name="bodega"
+          aria-label="Floating label select example" #bodega="ngModel"
+          [ngClass]="{'is-invalid': bodega.invalid && (bodega.dirty || bodega.touched)}"
+          (ngModelChange)="onGetMesaBodega($event)" required>
+          <option selected disabled value="">Seleccione una opción</option>
+          <option *ngFor="let item of bodegas" [value]="item._id">{{item.codigo}} - {{item.nombre}} </option>
+
+        </select>
+        <label for="floatingSelect">Bodega</label>
+      </div>
+
+      <div class="form-floating mb-3">
+        <select class="form-select" id="floatingSelect" [(ngModel)]='addForm.mesa' name="mesa"
+          aria-label="Floating label select example" #mesa="ngModel"
+          [ngClass]="{'is-invalid': mesa.invalid && (mesa.dirty || mesa.touched)}" required>
+          <option selected disabled value="">Seleccione una opción</option>
+          <option *ngFor="let item of mesas" [value]="item._id">{{item.nombre}} </option>
+
+        </select>
+        <label for="floatingSelect">Mesa</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" [(ngModel)]='addForm.nombre' name="nombre" #nombre="ngModel"
+          [ngClass]="{'is-invalid': nombre.invalid && (nombre.dirty || nombre.touched)}" id="floatingInput"
+          placeholder="nombre" autocomplete="off" required>
+        <label for="floatingInput">Nombre</label>
+      </div>
+
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" [(ngModel)]='addForm.cedula' name="cedula" id="floatingInput"
+          #cedula="ngModel" [ngClass]="{'is-invalid': cedula.invalid && (cedula.dirty || cedula.touched)}"
+          placeholder="Ubicación" autocomplete="off" required>
+        <label for="floatingInput">Cédula</label>
+      </div>
+
+      <div class="form-floating mb-3">
+        <select class="form-select" id="floatingSelect" [(ngModel)]='addForm.perfil' name="perfil"
+          aria-label="Floating label select example" #perfil="ngModel"
+          [ngClass]="{'is-invalid': perfil.invalid && (perfil.dirty || perfil.touched)}" required>
+          <option selected disabled value="">Seleccione una opción</option>
+          <option [value]="'Contador'">Contador </option>
+          <option [value]="'Coordinador'">Coordinador </option>
+        </select>
+        <label for="floatingSelect">Perfil</label>
+      </div>
+      <div class="offcanvas-footer">
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="(AddForm.pristine || AddForm.invalid)
+          ">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+  </form>
+
+</div>
+
+<div class="offcanvas offcanvas-end offcanvasEdit" tabindex="-1" id="offcanvasRightEdit"
+  aria-labelledby="offcanvasRightEditLabel">
+  <form (submit)="onUpdate()" #EditForm="ngForm" method="post">
+    <div class="offcanvas-header">
+      <h6 class="offcanvas-title" id="offcanvasRightEditLabel">Información Colaborador</h6>
+    </div>
+
+    <div class="offcanvas-body">
+
+      <div class="form-floating mb-3">
+        <select class="form-select" id="floatingSelect" [(ngModel)]='editForm.bodega' name="bodega"
+          aria-label="Floating label select example" #bodega="ngModel"
+          [ngClass]="{'is-invalid': bodega.invalid && (bodega.dirty || bodega.touched)}"
+          (ngModelChange)="onGetMesaBodega($event)" required>
+          <option selected disabled value="">Seleccione una opción</option>
+          <option *ngFor="let item of bodegas" [value]="item._id">{{item.codigo}} - {{item.nombre}} </option>
+
+        </select>
+        <label for="floatingSelect">Bodega</label>
+      </div>
+
+      <div class="form-floating mb-3">
+        <select class="form-select" id="floatingSelect" [(ngModel)]='editForm.mesa' name="mesa"
+          aria-label="Floating label select example" #mesa="ngModel"
+          [ngClass]="{'is-invalid': mesa.invalid && (mesa.dirty || mesa.touched)}" required>
+          <option selected disabled value="">Seleccione una opción</option>
+          <option *ngFor="let item of mesas" [value]="item._id">{{item.nombre}} </option>
+
+        </select>
+        <label for="floatingSelect">Mesa</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" [(ngModel)]='editForm.nombre' name="nombre" #nombre="ngModel"
+          [ngClass]="{'is-invalid': nombre.invalid && (nombre.dirty || nombre.touched)}" id="floatingInput"
+          placeholder="nombre" autocomplete="off" required>
+        <label for="floatingInput">Nombre</label>
+      </div>
+
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" [(ngModel)]='editForm.cedula' name="cedula" id="floatingInput"
+          #cedula="ngModel" [ngClass]="{'is-invalid': cedula.invalid && (cedula.dirty || cedula.touched)}"
+          placeholder="Ubicación" autocomplete="off" required>
+        <label for="floatingInput">Cédula</label>
+      </div>
+
+      <div class="form-floating mb-3">
+        <select class="form-select" id="floatingSelect" [(ngModel)]='editForm.perfil' name="perfil"
+          aria-label="Floating label select example" #perfil="ngModel"
+          [ngClass]="{'is-invalid': perfil.invalid && (perfil.dirty || perfil.touched)}" required>
+          <option selected disabled value="">Seleccione una opción</option>
+          <option [value]="'Contador'">Contador </option>
+          <option [value]="'Coordinador'">Coordinador </option>
+        </select>
+        <label for="floatingSelect">Perfil</label>
+      </div>
+      <div class="offcanvas-footer">
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="(EditForm.pristine || EditForm.invalid)
+          ">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+  </form>
+
+</div>

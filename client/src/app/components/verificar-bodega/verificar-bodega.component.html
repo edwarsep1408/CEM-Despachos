@@ -1,0 +1,41 @@
+
+
+<div class="conten">
+  <div class="container mt-3">
+    <div class="d-flex justify-content-end">
+      <a [routerLink]="'/configuracion/dashboard'" class="btn btn-white" data-bs-toggle="modal" data-bs-target="#configModal" *ngIf="statusSession">
+        <i class="bi bi-gear"></i>
+      </a>
+    </div>
+  </div>
+  <div class="conti_form">
+    <img src="../../../assets/img/logopollocoa.png" width="150px" alt="fff" class='Img'>
+    <div class="texto">
+        <p class="titulo">¡ Bienvenido a Inventario C.E.M!</p>
+        <!-- <p class="desc">Seleccione la bodega</p> -->
+    </div>
+     <div *ngIf="errorMessage" class="alert alert-danger w-100 text-center" role="alert">
+      {{ errorMessage }}
+    </div>
+    <form [formGroup]="registrarBodega" (submit)="onSubmit()" class="login" method="POST">
+      <div class="form-floating mb-2">
+        <select class="form-select" formControlName="bodega" id="floatingSelect" aria-label="Floating label select example">
+          <option [value]="''" selected disabled>--Seleccione una opción--</option>
+          <option *ngFor="let item of bodegasData" [value]="item._id">{{item.codigo}} - {{item.nombre}} </option>
+        </select>
+        <label for="floatingSelect">Bodega</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" formControlName="cedula" name="cedula" id="floatingInput"
+          placeholder="nombre" autocomplete="off" required>
+        <label for="floatingInput">Cédula</label>
+      </div>
+      <button class="button login__submit" type="submit">
+        <span class="button__text">Ingresar</span>
+      </button>
+
+    </form>
+  </div>
+</div>
+
+ 

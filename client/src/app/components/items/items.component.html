@@ -1,0 +1,235 @@
+<div *ngIf="cargando" class="spinner-container">
+  <mat-progress-spinner mode="indeterminate" diameter="50" color="primary">
+  </mat-progress-spinner>
+</div>
+
+<div class="mt-3" *ngIf="!cargando">
+  <div class="card shadow-sm border-light">
+    <div class="card-body py-2">
+      <div class="d-flex justify-content-between flex-wrap">
+        <div>
+          <h6 class="mb-2"><i class="bi bi-clock-history"></i> Última sincronización</h6>
+          <small class="text-muted">{{ ultimaSincronizacion.fecha_sincronizacion | date:'medium' }}</small><br>
+          <small><strong>Registros nuevos:</strong> {{ ultimaSincronizacion.total_items_nuevos }}</small><br>
+          <small><strong>Actualizaciones:</strong> {{ ultimaSincronizacion.total_actualizaciones }}</small><br>
+          <small><strong>Responsable:</strong> {{ ultimaSincronizacion.usuario_iniciador }}</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="content-title" *ngIf="!cargando">
+  <div class="col-mb-6">
+    <h3>Items</h3>
+  </div>
+
+  <div class="col-mb-6 d-grid gap-2 d-md-flex justify-content-md-end">
+    <div class="input-group input-search">
+      <span class="input-group-text search-icon" id="basic-addon2">
+        <i class="ri-search-line"></i>
+      </span>
+      <input type="text" class="form-control search-input" (keyup)="applyFilter($event)" placeholder="Buscar"
+        aria-label="Buscar" name="buscar" aria-describedby="basic-addon2" />
+    </div>
+    <!-- <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+      <i class="bi bi-file-earmark-excel-fill"></i>
+    </button> -->
+
+    <button type="button" class="btn btn-primary" (click)="onSincronizarReferencias()">
+      <i class="bi bi-arrow-clockwise"></i> Sincronización
+    </button>
+  </div>
+</div>
+
+
+<div class="mat-elevation-z4" *ngIf="!cargando">
+  <table mat-table [dataSource]="dataSource" matSort>
+    <ng-container matColumnDef="item">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>ITEM</th>
+      <td mat-cell *matCellDef="let element">
+        <div class="content-ilustration">
+          <div class="ilustration">
+            <i class="bi bi-box"></i>
+          </div>
+
+          {{ element.item }}
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="codigoItem">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>CÓDIGO DEL ITEM</th>
+      <td mat-cell *matCellDef="let element">{{ element.codigoItem }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="referencia">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>REFERENCIA</th>
+      <td mat-cell *matCellDef="let element">{{ element.referencia }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="descripcion">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>DESCRIPCIÓN</th>
+      <td mat-cell *matCellDef="let element">{{ element.descripcion }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="descCorta">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>
+        DESCRIPCIÓN CORTA
+      </th>
+      <td mat-cell *matCellDef="let element">{{ element.descCorta }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="idTipoinventario">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>
+        ID TIPO INVENTARIO
+      </th>
+      <td mat-cell *matCellDef="let element">{{ element.idTipoinventario }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="undInventario">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>UND INVENTARIO</th>
+      <td mat-cell *matCellDef="let element">{{ element.undInventario }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="undAdicional">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>UND ADICIONAL</th>
+      <td mat-cell *matCellDef="let element">{{ element.undAdicional }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="estado">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>ESTADO</th>
+      <td mat-cell *matCellDef="let element">
+        <ng-container [ngSwitch]="element.estado">
+          <span *ngSwitchCase="'0'">  <i class="bi bi-x-circle" title="Inactivo"></i></span>
+          <span *ngSwitchCase="'1'"> <i class="bi bi-check-circle" title="Activo"></i></span>
+          <span *ngSwitchCase="'2'"> <i class="bi bi-lock-fill" title="Bloqueado"></i></span>
+          
+        </ng-container>
+
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+
+  <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page of periodic elements">
+  </mat-paginator>
+</div>
+
+<!-- <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+  <form (submit)="onSubmit()" #AddForm="ngForm" method="post">
+    <div class="offcanvas-header">
+      <h6 class="offcanvas-title" id="offcanvasRightLabel">Información Items</h6>
+    </div>
+
+    <div class="offcanvas-body">
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" [(ngModel)]='addForm.nombre' name="nombre" #nombre="ngModel"
+          [ngClass]="{'is-invalid': nombre.invalid && (nombre.dirty || nombre.touched)}" id="floatingInput" placeholder="Tipo"
+          autocomplete="off" required>
+        <label for="floatingInput">Nombre</label>
+      </div>
+
+      <div class="form-floating mb-3">
+        <select class="form-select" id="floatingSelect" [(ngModel)]='addForm.tipo' name="tipo"
+          aria-label="Floating label select example" #tipo="ngModel"
+          [ngClass]="{'is-invalid': tipo.invalid && (tipo.dirty || tipo.touched)}" required>
+          <option selected disabled value="">Seleccione una opción</option>
+          <option value="Empaque">Empaque</option>
+          <option value="Materia Prima">Materia Prima</option>
+        </select>
+        <label for="floatingSelect">Tipo</label>
+      </div>
+
+      <div class="form-floating mb-3">
+        <select class="form-select" id="floatingSelect" [(ngModel)]='addForm.unidad_medida' name="unidad_medida"
+          aria-label="Floating label select example" #unidadMedida="ngModel"
+          [ngClass]="{'is-invalid': unidadMedida.invalid && (unidadMedida.dirty || unidadMedida.touched)}" required>
+          <option selected disabled value="">Seleccione una opción</option>
+          <option *ngFor="let item of unidadesMedida" [value]="item._id">{{item.codigo}} - {{item.unidad}} </option>
+        </select>
+        <label for="floatingSelect">Unidad de Medida</label>
+      </div>
+
+    </div>
+    <div class="offcanvas-footer">
+      <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="(AddForm.pristine || AddForm.invalid)
+        ">Guardar</button>
+      </div>
+    </div>
+  </form>
+
+</div> -->
+
+<!-- <div class="offcanvas offcanvas-end offcanvasEdit" tabindex="-1" id="offcanvasRightEdit"
+  aria-labelledby="offcanvasRightEditLabel">
+  <form (submit)="onUpdate()" #EditForm="ngForm" method="post">
+    <div class="offcanvas-header">
+      <h6 class="offcanvas-title" id="offcanvasRightEditLabel">Información Items</h6>
+    </div>
+
+    <div class="offcanvas-body">
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" [(ngModel)]='editForm.nombre' name="nombre" #editNombre="ngModel"
+          [ngClass]="{'is-invalid': editNombre.invalid && (editNombre.dirty || editNombre.touched)}" id="floatingInput"
+          placeholder="Tipo" autocomplete="off" required>
+        <label for="floatingInput">Nombre</label>
+      </div>
+
+      <div class="form-floating mb-3">
+        <select class="form-select" id="floatingSelect" [(ngModel)]='editForm.tipo' name="tipo"
+          aria-label="Floating label select example" #editTipo="ngModel"
+          [ngClass]="{'is-invalid': editTipo.invalid && (editTipo.dirty || editTipo.touched)}" required>
+          <option selected disabled value="">Seleccione una opción</option>
+          <option value="Producto">Producto</option>
+          <option value="Materia Prima">Materia Prima</option>
+        </select>
+        <label for="floatingSelect">TIPO</label>
+      </div>
+      <div class="form-floating mb-3">
+        <select class="form-select" id="floatingSelect" [(ngModel)]='editForm.unidad_medida' name="unidad_medida"
+          aria-label="Floating label select example" #editUnidadMedida="ngModel"
+          [ngClass]="{'is-invalid': editUnidadMedida.invalid && (editUnidadMedida.dirty || editUnidadMedida.touched)}"
+          required>
+          <option selected disabled value="">Seleccione una opción</option>
+          <option *ngFor="let item of unidadesMedida" [value]="item._id">{{item.codigo}} - {{item.unidad}} </option>
+
+        </select>
+        <label for="floatingSelect">Unidad de medida</label>
+      </div>
+    </div>
+    <div class="offcanvas-footer">
+      <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <button type="button" class="btn btn-secondary btn-edit" data-bs-dismiss="offcanvas"
+          data-bs-dismiss-edit="true">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="(EditForm.pristine || EditForm.invalid)
+        ">Guardar</button>
+      </div>
+    </div>
+  </form>
+
+</div> -->
+
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="formFileMultiple" class="form-label">Seleccione el archivo</label>
+          <input class="form-control" type="file" id="formFileMultiple" accept=".xls,.xlsx" name="cargarExcel"
+            (change)="onchangeExcel($event)" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cerrar
+        </button>
+        <button type="button" class="btn btn-success" (click)="onUploadExcel()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>

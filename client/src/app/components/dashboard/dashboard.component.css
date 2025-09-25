@@ -1,0 +1,112 @@
+.content-title {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.btn-filter{
+  width: 70px;
+  height: 38px;
+
+}
+.cardInfoInventario{
+  
+  /* background-image: url('../../../assets/img/bannerVertical.png'); */
+  background-image: url('../../../assets/img/backgroundImg.png');
+  /* background-color: rgba(0, 0, 0, 0.6); */
+ /*  opacity: 0.7; 
+ filter: brightness(0.7);*/
+ /* background-color: #f7d168 !important;  */
+
+}
+.liTables{
+  list-style: none;
+}
+
+.btn-filter> i{
+  color: #0e66da;
+}
+/* .cardTitle{
+  color: #000;
+  font: oblique bold 150%;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+.cardText{
+  color: #000;
+  
+ 
+}*/
+.card-info{
+  border-radius: 20px;
+}
+
+.card-icon{
+  width: 40px;
+  height: 40px;
+  padding: 5px;
+  text-align: center;
+  color: #0e74da;
+}
+
+.table-resumen{
+  max-width: 100%;
+  overflow: auto;
+}
+.correcta {
+  color: #166534 !important;
+  background-color: #dcfce7 !important;
+}
+.diferencia{
+  color: #651616 !important;
+  background-color: #fcdcdc !important;
+}
+
+.content-ilustration {
+  display: flex;
+  flex-direction: row;
+}
+
+.ilustration {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  margin-right: 10px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px;
+  border: solid 1px var(--color-neutral-n30);
+  background-color: #9da1af;
+  color: white;
+  transition: all 0.2s cubic-bezier(0.4, 0.6, 0.5, 1.32);
+}
+
+.card-formulario {
+  background-color: white;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px,
+    rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
+}
+
+.example-viewport {
+  height: 400px;
+  width: 100%;
+}
+
+.td-info {
+  width: 50%;
+}
+.v-separator {
+  content: "";
+  display: inline;
+  width: 0px;
+  height: 24px;
+  border-left: 1px solid rgba(63, 63, 63, 0.541);
+  padding: 0;
+  margin-left: 10px;
+  margin-right: 10px;
+}

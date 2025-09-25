@@ -1,0 +1,217 @@
+<div *ngIf="cargando" class="spinner-container">
+  <mat-progress-spinner mode="indeterminate" diameter="50" color="primary">
+  </mat-progress-spinner>
+</div>
+
+<div class="container">
+  <div class="row title rowSpaces">
+    <div class="col col-sm-6 col-md-6 col-lg-6 col-xl-6">
+      <h3 class="section-title">
+        Inventario por bodega &nbsp; <strong>{{ bodegaSeleccionada.descripcion }}</strong>
+      </h3>
+    </div>
+    <div class="col col-sm-6 col-md-6 col-lg-6 col-xl-6 text-end">
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          Bodegas
+        </button>
+        <ul class="dropdown-menu">
+          <li class="mb-2">
+            <input type="text" class="form-control form-control-sm" placeholder="Buscar bodega..."
+              [(ngModel)]="filtroBodega" (click)="$event.stopPropagation()">
+          </li>
+          <div style="max-height: 250px; overflow-y: auto;">
+            <li *ngFor="let detallebodega of onBodegasFiltradas">
+              <a class="dropdown-item" (click)="onChangeBodega(detallebodega.codigo, detallebodega.descripcion)">{{detallebodega.codigo}} - {{
+                detallebodega.descripcion}}</a>
+            </li>
+          </div>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="row g-4 rowSpaces" *ngIf="!cargando">
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
+        <div class="card-body text-center">
+          <i class="bi bi-grid-3x3 fs-1 mb-3"></i>
+          <h5 class="card-title text-dark">Bodega: {{ bodegaSeleccionada.codigo }}</h5>
+          <p class="card-text text-muted">Kgs total: {{ pesoTotal }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
+        <div class="card-body text-center">
+          <i class="bi bi-boxes fs-1 mb-3"></i>
+          <h5 class="card-title text-dark">Bodega: {{ bodegaSeleccionada.codigo }}</h5>
+          <p class="card-text text-muted">Unidades totales: {{ unidadesTotales }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
+        <div class="card-body text-center">
+          <i class="bi bi-basket fs-1 mb-3"></i>
+          <h5 class="card-title text-dark">Bodega: {{ bodegaSeleccionada.codigo }}</h5>
+          <p class="card-text text-muted">Canastas: {{ canastas }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
+        <div class="card-body text-center">
+          <i class="bi bi-basket2 fs-1 mb-3"></i>
+          <h5 class="card-title text-dark">Bodega: {{ bodegaSeleccionada.codigo }}</h5>
+          <p class="card-text text-muted">Canastillas: {{ canastillas }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row rowSpaces">
+
+    <div class="col-6">
+      <div class="card">
+        <div class="card-body">
+          <h6>Línea de productos</h6>
+          <div class="chart-container">
+            <div id="chartLinea"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6">
+      <div class="card">
+        <div class="card-body">
+          <h6>Combinación de críterios por bodega</h6>
+          <div class="chart-container">
+            <div id="chart"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Productos CON inventario -->
+
+  <div class="row mb-3">
+
+    <div class="col">
+      <h3 class="section-title">
+        <i class="bi bi-box2-fill text-success me-2"></i>
+        Productos con inventario en bodega &nbsp; <strong>{{ bodegaSeleccionada.descripcion }}</strong>
+      </h3>
+    </div>
+    <div class="col-md-4 offset-md-8">
+      <div class="input-group shadow-sm">
+        <span class="input-group-text bg-light border-0">
+          <i class="bi bi-search text-muted"></i>
+        </span>
+        <input type="text" class="form-control border-0" placeholder="Buscar..." (keyup)="applyFilterConInfo($event)">
+      </div>
+    </div>
+  </div>
+
+  <div class="row" *ngIf="dataSourceInventarioConCantidades">
+    <div class="col-12">
+      <table mat-table [dataSource]="dataSourceInventarioConCantidades" class="mat-elevation-z8 styled-table" matSort
+        (matSortChange)="announceSortChange($event)">
+
+        <ng-container matColumnDef="referencia">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Referencia</th>
+          <td mat-cell *matCellDef="let element">{{ element.referencia }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="descripcion">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Descripción</th>
+          <td mat-cell *matCellDef="let element">{{ element.descripcion }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="Existencia_1">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Kilogramos</th>
+          <td mat-cell *matCellDef="let element">{{ element.Existencia_1 | number: '1.0-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="Existencia_2">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Unidades</th>
+          <td mat-cell *matCellDef="let element">{{ element.Existencia_2 | number: '1.0-0' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="abc_rotacion_veces">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Rotacion</th>
+          <td mat-cell *matCellDef="let element" [ngClass]="ABCitem(element.abc_rotacion_veces)">{{
+            element.abc_rotacion_veces }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayColumnsConCantidades" class="sticky-header"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayColumnsConCantidades;" class="hover-row"></tr>
+      </table>
+
+      <mat-paginator #paginatorInformacion [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons></mat-paginator>
+    </div>
+  </div>
+
+  <hr class="my-5">
+
+  <!-- Productos SIN inventario -->
+  <div class="row mt-4 mb-3">
+    <div class="col">
+      <h3 class="section-title">
+        <i class="bi bi-box-seam text-danger me-2"></i>
+        Productos sin inventario en bodega &nbsp; <strong>{{ bodegaSeleccionada.descripcion }}</strong>
+      </h3>
+    </div>
+    <div class="col-md-4 offset-md-8">
+      <div class="input-group shadow-sm">
+        <span class="input-group-text bg-light border-0">
+          <i class="bi bi-search text-muted"></i>
+        </span>
+        <input type="text" class="form-control border-0" placeholder="Buscar..." (keyup)="applyFilter($event)">
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8 styled-table">
+
+        <ng-container matColumnDef="referencia">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Referencia</th>
+          <td mat-cell *matCellDef="let element">{{ element.referencia }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="descripcion">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Descripción</th>
+          <td mat-cell *matCellDef="let element">{{ element.descripcion }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="Existencia_1">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Kilogramos</th>
+          <td mat-cell *matCellDef="let element">{{ element.Existencia_1 }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="Existencia_2">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Unidades</th>
+          <td mat-cell *matCellDef="let element">{{ element.Existencia_2 }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="abc_rotacion_veces">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Rotacion</th>
+          <td mat-cell *matCellDef="let element" [ngClass]="ABCitem(element.abc_rotacion_veces)">{{
+            element.abc_rotacion_veces }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displeyColumns" class="sticky-header"></tr>
+        <tr mat-row *matRowDef="let row; columns: displeyColumns;" class="hover-row"></tr>
+      </table>
+
+      <mat-paginator #paginatorSinInformacion [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons></mat-paginator>
+    </div>
+  </div>
+</div>

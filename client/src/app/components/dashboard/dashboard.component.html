@@ -1,0 +1,489 @@
+<h3>Panel de análisis</h3>
+
+<div class="row" *ngIf="mesasSinInformacion === true">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="mb-3">INFORMACÍON IMPORTANTE</h5>
+        <h5>Actualmente hay {{informacionMesasSinInformacion.length}} planillas abiertas que están causando algunos
+          errores en la aplicación. Por favor cierre las mesas :</h5>
+        <ol>
+          <li *ngFor="let info of informacionMesasSinInformacion">
+            &nbsp; <strong> Bodega: </strong> {{info.bodegas}}
+            &nbsp; <strong> Mesa: </strong> {{info.mesas}}
+            &nbsp; <strong> Fecha inventario : </strong> {{info.fecha_inventario_formato}}
+          </li>
+        </ol>
+        <h5>después de cerrar las planillas este mensaje se eliminará automáticamente y podrá ver la información del
+          último inventario.</h5>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content-title" *ngIf="informacionInventario ">
+
+  <div class="col-sm-6 col-md-3 col-lg-3 col-xl-3">
+    <div class="card text-white bg-primary mb-3 cardInfoInventario" style="max-width: 20rem; height: 13rem; ">
+      <div class="card-header cardTitle">INFORMACIÓN INVENTARIO</div>
+      <div class="card-body ">
+
+        <p class="card-text cardText "><small>Estado: {{this.informacionInventario.estadoInventario}}</small></p>
+        <p class="card-text cardText"><small>{{ this.informacionInventario.codigo_bodega}} - {{
+            this.informacionInventario.nombre_bodega}}</small></p>
+        <p class="card-text cardText"><small>{{this.informacionInventario.fechaMasRecienteInventario}}</small></p>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-md-6 col-lg-6 col-xl-6">
+    <div class="card" style="max-width: 50rem; height: 20rem; margin-right: 10px;margin-left: 10px;">
+      <div class="chart-container">
+        <canvas id="MyChart"> {{chart}}</canvas>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="col-sm-6 col-md-3 col-lg-3 col-xl-3 ">
+    <div class="card text-white bg-primary mb-3 cardInfoInventario d-flex justify-content-end"
+      style="max-width: 20rem; height: 13rem;">
+      <div class="card-header cardTitle">{{ this.informacionInventario.nombre_bodega}} - Mesas</div>
+      <div class="card-body ">
+        <thead class="cardText">
+          <tr>
+            <th>
+              Mesa &nbsp;
+            </th>
+            <th>
+              Kilos &nbsp;
+            </th>
+            &nbsp;
+            <th>
+              Unidades
+            </th>
+          </tr>
+        </thead>
+        <tbody class="cardText">
+          <tr *ngFor="let item of informacionPorMesas" class="liTables">
+            <td style="text-align: left;">
+              <small>{{item.mesa}}</small> &nbsp;
+            </td>
+            <td>
+              <small>{{item.kg_pesados | number : "1.0-2" }}</small> &nbsp;
+            </td>
+            &nbsp;
+            <td style="text-align: center;">
+              <small>{{item.unidades_contadas | number: '1.0-0'}}</small>
+            </td>
+          </tr>
+        </tbody>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row" *ngIf="dataDashboard">
+  <div class="col-3 mb-4">
+    <div class="card card-info shadow-sm">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <p class="text-muted fw-medium text-capitalize">Unidades</p>
+            <h5 class="fw-bold">
+              {{ dataDashboard.resumenGeneral.unidades_contadas | number : "1.0-0" }}
+            </h5>
+          </div>
+          <div class="col icon d-flex justify-content-end">
+            <div class="card card-icon">
+              <i class="bi bi-boxes"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-3 mb-4">
+    <div class="card card-info shadow-sm">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <p class="text-muted fw-medium text-capitalize">
+              Kilogramos Brutos
+            </p>
+            <h5 class="fw-bold">
+              {{ dataDashboard.resumenGeneral.kg_pesados | number : "1.0-2" }}
+            </h5>
+          </div>
+          <div class="col-3 icon d-flex justify-content-end">
+            <div class="card card-icon">
+              <i class="bi bi-speedometer2"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-3 mb-4">
+    <div class="card card-info shadow-sm">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <p class="text-muted fw-medium text-capitalize">Kilogramos Netos</p>
+            <h5 class="fw-bold">
+              {{ dataDashboard.resumenGeneral.kg_neto | number : "1.0-2" }}
+            </h5>
+          </div>
+          <div class="col-3 icon d-flex justify-content-end">
+            <div class="card card-icon">
+              <i class="bi bi-speedometer"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-3 mb-4">
+    <div class="card card-info shadow-sm">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <p class="text-muted fw-medium text-capitalize">Canastas</p>
+            <h5 class="fw-bold">
+              {{ dataDashboard.resumenGeneral.numero_canastas }}
+            </h5>
+          </div>
+          <div class="col icon d-flex justify-content-end">
+            <div class="card card-icon">
+              <i class="bi bi-box-fill"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-3 mb-4">
+    <div class="card card-info shadow-sm">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <p class="text-muted fw-medium text-capitalize">Bultos</p>
+            <h5 class="fw-bold">
+              {{ dataDashboard.resumenGeneral.numero_bultos | number : "1.0-2"}}
+            </h5>
+          </div>
+          <div class="col icon d-flex justify-content-end">
+            <div class="card card-icon">
+              <i class="bi bi-box-fill"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-3 mb-4">
+    <div class="card card-info shadow-sm">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <p class="text-muted fw-medium text-capitalize">Canastillas</p>
+            <h5 class="fw-bold">
+              {{ dataDashboard.resumenGeneral.numero_canastillas | number : "1.0-2" }}
+            </h5>
+          </div>
+          <div class="col icon d-flex justify-content-end">
+            <div class="card card-icon">
+              <i class="bi bi-box-seam-fill"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-3 mb-4">
+    <div class="card card-info shadow-sm">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <p class="text-muted fw-medium text-capitalize">Carreta</p>
+            <h5 class="fw-bold">{{ dataDashboard.resumenGeneral.carreta | number : "1.0-2" }}</h5>
+          </div>
+          <div class="col icon d-flex justify-content-end">
+            <div class="card card-icon">
+              <i class="bi bi-minecart"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<br>
+
+<div class="row mb-3">
+  <div class="col">
+    <h3 class="section-title">
+      <i class="bi bi-grid-3x3 text-success me-2"></i>
+      Resumen inventario &nbsp;
+    </h3>
+  </div>
+  <div class="col-md-4 offset-md-8">
+    <div class="input-group shadow-sm">
+      <span class="input-group-text bg-light border-0">
+        <i class="bi bi-search text-muted"></i>
+      </span>
+      <input type="text" class="form-control border-0" placeholder="Buscar..." (keyup)="applyFilter($event)">
+    </div>
+  </div>
+</div>
+
+
+
+<div class="row" *ngIf="datasource">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="table-resumen">
+          <table mat-table [dataSource]="datasource" matSort (matSortChange)="announceSortChange($event)">
+            <ng-container matColumnDef="codigo">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>CÓDIGO</th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.referencia }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="descripcion">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                DESCRIPCIÓN
+              </th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.descripcion }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="mesa">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>MESA</th>
+              <td mat-cell *matCellDef="let element">{{ element.mesa }}</td>
+            </ng-container>
+            <ng-container matColumnDef="numero_conteo">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>#-CONTEO</th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.numero_conteo }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="suma_kilos">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                KILOS NETOS
+              </th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.kg_neto | number : "1.0-2" }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="suma_unidades">
+              <th mat-header-cell *matHeaderCellDef>UNIDADES</th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.unidades_contadas | number: '1.0-0' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="promedio">
+              <th mat-header-cell *matHeaderCellDef>PROMEDIO</th>
+              <td mat-cell *matCellDef="let element">
+                {{
+                element.kg_neto / element.unidades_contadas | number : "1.0-2"
+                }}
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns" (click)="detalleConteo(row)"
+              data-bs-toggle="modal" data-bs-target="#exampleModal"></tr>
+          </table>
+
+          <mat-paginator #paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons
+            aria-label="Select page of periodic elements">
+          </mat-paginator>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal DETALLES CONTEO-->
+<div class="modal fade modal-xl" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel"> <strong>Numero conteo: </strong> {{ numeroConteo }}</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-6 mb-3" *ngFor="let item of conteoDetalles">
+
+            <div class="card h-100 border-0 shadow-sm rounded-4 bg-light">
+              <div class="card-body text-start p-4">
+
+                <div class="mb-3 text-center">
+                  <h6 class="text-muted mb-1">Producto</h6>
+                  <h5 class="fw-bold">{{ item.producto.descCorta }}</h5>
+                </div>
+
+                <div class="row mb-2">
+                  <div class="col-6">
+                    <small class="text-muted">Referencia</small>
+                    <div class="fw-semibold">{{ item.producto.referencia }}</div>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Conteo</small>
+                    <div class="fw-semibold">{{ item.conteo.numero_conteo }}</div>
+                  </div>
+                </div>
+
+                <div class="row mb-2">
+                  <div class="col-6">
+                    <small class="text-muted">Número Canastas</small>
+                    <div class="fw-semibold">{{ item.numero_canastas }}</div>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Número Canastillas</small>
+                    <div class="fw-semibold">{{ item.numero_canastillas }}</div>
+                  </div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-6">
+                    <small class="text-muted">Bultos</small>
+                    <div class="fw-semibold">{{ item.numero_bultos }}</div>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Cajas</small>
+                    <div class="fw-semibold">{{ item.numero_cajas }}</div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-6">
+                    <small class="text-muted">Carreta</small>
+                    <div class="fw-semibold">{{ item.carreta }}</div>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Unidades Contadas</small>
+                    <div class="fw-semibold">{{ item.unidades_contadas }}</div>
+                  </div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-6">
+                    <small class="text-muted">KG Pesados</small>
+                    <div class="fw-semibold">{{ item.kg_pesados }}</div>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Kilogramos netos</small>
+                    <div class="fw-semibold">{{ item.kg_neto }}</div>
+                  </div>
+
+
+                </div>
+
+                <div class="row mb-2">
+
+                  <div class="col-6">
+                    <small class="text-muted">Número de conteo</small>
+                    <div class="fw-semibold">{{ item.numero_conteo }}</div>
+                  </div>
+
+                  <div class="col-6">
+                    <small class="text-muted">Encargado</small>
+                    <div class="fw-semibold">{{ item.colaborador.nombre }}</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button *ngIf="informacionInventario.estadoInventario !== 'Finalizado' && habilitarCorreccion" type="button"
+          class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalEditarConteo">Editar
+          conteo {{ numeroConteo }} </button>
+      </div>
+
+      <!--  <button *ngIf="informacionInventario.estadoInventario !== 'Finalizado'" type="button" class="btn btn-primary"
+        data-bs-toggle="modal" data-bs-target="#modalEditarConteo">Editar
+        conteo {{ numeroConteo }} </button>
+    </div> -->
+    
+    </div>
+  </div>
+</div>
+
+<!-- Modal CORRECCIÓN CONTEO-->
+<div class="modal fade" id="modalEditarConteo" tabindex="-1" aria-labelledby="modalEditarConteo" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="modalEditarConteo">Corrección conteo {{ numeroConteo }} </h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form (ngSubmit)="onSubmitCorregir()" [formGroup]="formularioCorregir">
+          <h5 class="text-center"><strong>{{ referenciaCorregir}} - {{productoCorregir}} </strong></h5>
+          <div class="form-floating mb-3">
+            <input type="text" class="form-control"
+              [ngClass]="{'is-invalid' : formularioCorregir.controls['numero_canastas'].invalid && formularioCorregir.controls['numero_canastas'].touched}"
+              name="numero_canastas" formControlName="numero_canastas" id="numero_canastas" placeholder="0"
+              autocomplete="off" required>
+            <label for="numero_canastas">Número Canastas</label>
+          </div>
+          <div class="form-floating mb-3">
+            <input type="text" class="form-control"
+              [ngClass]="{'is-invalid' : formularioCorregir.controls['numero_canastillas'].invalid && formularioCorregir.controls['numero_canastillas'].touched}"
+              name="numero_canastillas" formControlName="numero_canastillas" id="numero_canastillas" placeholder="0"
+              autocomplete="off" required>
+            <label for="numero_canastillas">Número Canastillas</label>
+          </div>
+          <div class="form-floating mb-3">
+            <input type="text" class="form-control"
+              [ngClass]="{'is-invalid' : formularioCorregir.controls['numero_bultos'].invalid && formularioCorregir.controls['numero_bultos'].touched}"
+              name="numero_bultos" formControlName="numero_bultos" id="numero_bultos" placeholder="0" autocomplete="off"
+              required>
+            <label for="numero_bultos">Número Bultos</label>
+          </div>
+          <div class="form-floating mb-3">
+            <input type="text" class="form-control"
+              [ngClass]="{'is-invalid' : formularioCorregir.controls['numero_cajas'].invalid && formularioCorregir.controls['numero_cajas'].touched}"
+              name="numero_cajas" formControlName="numero_cajas" id="numero_cajas" placeholder="0" autocomplete="off"
+              required>
+            <label for="numero_cajas">Número Cajas</label>
+          </div>
+          <div class="form-floating mb-3">
+            <input type="text" class="form-control"
+              [ngClass]="{'is-invalid' : formularioCorregir.controls['carreta'].invalid && formularioCorregir.controls['carreta'].touched}"
+              name="carreta" formControlName="carreta" id="carreta" placeholder="0" autocomplete="off" required>
+            <label for="carreta">Carreta</label>
+          </div>
+          <div class="form-floating mb-3">
+            <input type="text" class="form-control"
+              [ngClass]="{'is-invalid' : formularioCorregir.controls['kg_pesados'].invalid && formularioCorregir.controls['kg_pesados'].touched}"
+              name="kg_pesados" formControlName="kg_pesados" id="kg_pesados" placeholder="0" autocomplete="off"
+              required>
+            <label for="kg_pesados">KG pesados</label>
+          </div>
+          <div class="form-floating mb-3">
+            <input type="text" class="form-control"
+              [ngClass]="{'is-invalid' : formularioCorregir.controls['unidades_contadas'].invalid && formularioCorregir.controls['unidades_contadas'].touched}"
+              name="unidades_contadas" formControlName="unidades_contadas" id="unidades_contadas" placeholder="0"
+              autocomplete="off" required>
+            <label for="unidades_contadas">Unidades Contadas</label>
+          </div>
+          <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-primary"
+              [disabled]="formularioCorregir.pristine || formularioCorregir.invalid && btnCorregir">Corregir</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

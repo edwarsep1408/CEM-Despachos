@@ -1,0 +1,626 @@
+<div class="conten">
+  <div class="container">
+    <div class="row">
+      <div class="col-5">
+        <div class="container-contadores d-flex justify-content-center">
+          <div class="card card-info-contadores ">
+            <div class="participants d-flex justify-content-end">
+              <img *ngFor="let user of users" [src]="user.image" alt="" class="img-participants"
+                [class.loaded]="user.imageLoaded" [class.disconnected]="user.disconnected" (load)="onImageLoad(user)">
+              <div class="card img-participants number-participants" *ngIf="users.length > 3">
+                <h6>+{{users.length - 3}}</h6>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-7">
+        <div class="d-flex justify-content-end">
+          <div class="container-perfil">
+            <div class="card card-perfil-img">
+              <img src="../../../assets/img/g216.png" alt="" class="img-perfil">
+            </div>
+            <div class="card card-info-perfil" *ngIf="colaboradorData">
+              <h6><strong>{{colaboradorData.nombre}}</strong> </h6>
+              <small class="text-muted">{{colaboradorData.perfil}}</small>
+            </div>
+            <div class="ms-2">
+              <a [routerLink]="'/'" class="btn btn-white" data-bs-toggle="modal" data-bs-target="#configModal"
+                (click)="backInicio()">
+                <i class="bi bi-arrow-left"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-5">
+        <div class="card card-info">
+          <h5><strong>INFORMACIÓN CONTEO</strong></h5>
+
+          <div class="card card-content-info" *ngIf="planillaData">
+            <div class="row row-datils">
+              <div class="container-icon">
+                <i class="bi bi-card-checklist"></i>
+              </div>
+              <div class="text">
+                <h6><strong>N° de Planilla</strong></h6>
+                <p id="nombre_cont" name="nombre_cont">#{{planillaData.numero_planilla}}</p>
+
+              </div>
+            </div>
+
+          </div>
+
+          <div class="card card-content-info mt-2" *ngIf="conteoData">
+            <div class="row row-datils">
+              <div class="container-icon">
+                <i class="bi bi-list-ol"></i>
+              </div>
+              <div class="text">
+                <h6><strong>N° de Pesaje</strong></h6>
+                <p id="nombre_cont" name="nombre_cont">#{{conteoData.numero_conteo}}</p>
+
+              </div>
+            </div>
+
+          </div>
+
+          <div class="card card-content-info mt-2" *ngIf="mesaData">
+            <div class="row row-datils">
+              <div class="container-icon">
+                <i class="bi bi-file-spreadsheet"></i>
+              </div>
+              <div class="text">
+                <h6><strong>Mesa</strong></h6>
+                <p id="nombre_cont" name="nombre_cont">{{mesaData.nombre}}</p>
+
+              </div>
+            </div>
+
+          </div>
+
+          <button type="button" class="btn btn-primary  mt-5" *ngIf="planillaData && !diferencia"
+            (click)="onFinalizarPlanilla()">Finalizar</button>
+        </div>
+      </div>
+      <div class="col-7">
+        <div class="card card-formulario" *ngIf="planillaData && !diferencia && !pesajeCorregir">
+          <div class="row">
+            <div class="col-6">
+              <h5><strong>Información detallada</strong></h5>
+            </div>
+            <div class="col-6 d-flex justify-content-end">
+              <button type="button" class="btn btn-light " data-bs-toggle="modal" data-bs-target="#modalResumenGeneral"
+                (click)="onGetPlanillaResumen()">Resumen General</button>
+            </div>
+          </div>
+
+
+          <div class="row mt-3  " style="  display: flex;  justify-content: center;">
+
+            <div class="card" style="margin-bottom: 10px;" *ngFor="let item of conteoDataResumen;  let ultimo = first" [ngClass]="{'ultimo-pesaje': ultimo}">
+              <div class="card-body">
+                <td class="td-info">
+                  <div class="content-ilustration">
+                    <div class="ilustration" [ngClass]="{'ilustration-ultimo-pesaje': ultimo}">
+                      <i class="bi bi-box"></i>
+                    </div>
+                   # Pesaje {{item.numero_conteo}}
+                  </div>
+                </td>
+                <td>
+                  <div class="v-separator" [ngClass]="{'v-separator-ultimo': ultimo}"></div>
+                </td>
+                <td class="td-info">Conteos: {{item.total_conteos}}</td>
+                <td>
+                  <div class="v-separator" [ngClass]="{'v-separator-ultimo': ultimo}"></div>
+                </td>
+                <td class="td-info">
+                  <span class="badge " [class.correcta]="item.total_conteos <= 2"
+                    [class.diferencia]="item.total_conteos > 2">{{item.total_conteos <= 2? 'Correcta' : 'Diferencia'
+                      }}</span>
+                </td>
+                <td>
+                  <div class="v-separator" [ngClass]="{'v-separator-ultimo': ultimo}"></div>
+                </td>
+                <td class="td-info">
+                  <button class="btn btn-primary btn-sm"
+                    [disabled]="item.total_conteos !== 0 && item.total_conteos !== 1" (click)="clickCorregir(item)">
+                    Corregir
+                  </button>
+                </td>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-formulario" *ngIf="!planillaData && !diferencia">
+          <h5><strong>Crear Planilla</strong></h5>
+          <div class="container items-center mt-5" style="  display: flex;  justify-content: center;">
+            <div class="card" style="width: 18rem;">
+              <div class="card-body">
+                <h5 class="card-title">Planilla</h5>
+                <h6 class="card-subtitle mb-2 text-muted">Fecha Inventario: {{fechaInicioInventario}}</h6>
+                <p class="card-text" *ngIf="bodegaData"><strong>Bodega:</strong> {{bodegaData.nombre}} -
+                  {{bodegaData.codigo}}</p>
+                <p class="card-text" *ngIf="mesaData"><strong>Mesa:</strong> {{mesaData.nombre}}</p>
+              </div>
+            </div>
+
+          </div>
+          <div class="row mt-5" style="  display: flex;  justify-content: center;">
+            <div class="col-5">
+              <button type="button" class="btn btn-primary " (click)="onSubmitPlanilla()">Aceptar</button>
+            </div>
+            <div class="col-5 d-flex justify-content-end">
+              <button type="button" class="btn btn-secondary" (click)="cancelarPlanilla()">Cancelar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-formulario" *ngIf="diferencia && selectedProducto">
+          <div class="row text-center">
+            <div class="col-6">
+              <p class="text-muted">Producto</p>
+              <h6><Strong>{{selectedProducto.descripcion}}</Strong></h6>
+            </div>
+            <div class="col-6">
+              <p class="text-muted">Referencia</p>
+              <h6><strong>{{selectedProducto.referencia}}</strong></h6>
+            </div>
+
+            <button class="btn btn-secondary" (click)="cancelSelectedItem()">
+              Cancelar
+            </button>
+
+          </div>
+        </div>
+
+        <!-- CORREGIR DIFERENCIA CONTEO -->
+        <div class="card card-formulario" *ngIf="!selectedProducto && diferencia">
+          <button class="btn btn-secondary btn-sm" (click)="cancelarCorreccion()" *ngIf="pesajeCorregir">Cancelar
+            corrección</button>
+          <h5><strong>Buscar referencia</strong></h5>
+          <div class="input-group mb-3">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <div class="form-floating">
+              <input type="text" class="form-control" name="buscar" id="floatingInput" placeholder="Buscar"
+                autocomplete="off" (keyup)="searchItems($event)" required>
+              <label for="floatingInput">Buscar Item</label>
+
+            </div>
+
+          </div>
+          <div style="font-size: .875em;">
+            Por favor, ingresa al menos 3 caracteres.
+          </div>
+
+          <div class="mb-3 mt-3" *ngIf="itemsData.length != 0">
+            <h5>Productos</h5>
+            <cdk-virtual-scroll-viewport itemSize="50" class="example-viewport">
+              <div class="card" style="margin-bottom: 20px;" *cdkVirtualFor="let item of itemsData">
+                <div class="card-body">
+                  <td class="td-info">
+                    <div class="content-ilustration">
+                      <div class="ilustration">
+                        <i class="bi bi-box"></i>
+                      </div>
+                      {{item.descripcion}}
+                    </div>
+                  </td>
+                  <td class="td-info">
+                    <div class="v-separator"></div>
+                  </td>
+                  <td class="td-info">Referencia: {{item.referencia}}</td>
+                  <td class="td-info">
+                    <div class="v-separator"></div>
+                  </td>
+                  <td class="td-info">Código: {{item.codigoItem}}</td>
+                  <td class="td-info">
+                    <div class="v-separator"></div>
+                  </td>
+                  <td class="td-info">
+                    <button class="btn btn-sm btn-outline-primary" (click)=" selectedItemDetails(item)">
+                      <i class="bi bi-plus-circle-fill"></i>
+                    </button>
+                  </td>
+                </div>
+              </div>
+            </cdk-virtual-scroll-viewport>
+
+
+          </div>
+
+        </div>
+
+        <div class="card card-formulario mt-3" *ngIf="diferencia && selectedProducto && !pesajeCorregir">
+
+          <h5><strong>FORMULARIO</strong></h5>
+
+          <form (ngSubmit)="OnSubmitConteo()" [formGroup]="miFormulario">
+
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_canastas')}"
+                formControlName="numero_canastas" name="numero_canastas" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Número Canastas</label>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_canastillas')}"
+                formControlName="numero_canastillas" name="numero_canastillas" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Número Canastillas</label>
+            </div>
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_bultos')}"
+                formControlName="numero_bultos" name="numero_bultos" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Número Bultos</label>
+            </div>
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_cajas')}"
+                formControlName="numero_cajas" name="numero_cajas" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Número Cajas</label>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('carreta')}"
+                formControlName="carreta" name="carreta" id="floatingInput" placeholder="nombre" autocomplete="off"
+                required>
+              <label for="floatingInput">Carreta</label>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('kg_pesados')}"
+                formControlName="kg_pesados" name="kg_pesados" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">KG Pesados</label>
+            </div>
+
+            <div class="form-floating mb-4">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('unidades_contadas')}"
+                formControlName="unidades_contadas" name="unidades_contadas" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Unidades Contadas</label>
+            </div>
+
+            <div class="row">
+              <div class="col-5">
+                <button type="submit" class="btn btn-primary "
+                  [disabled]="miFormulario.pristine || miFormulario.invalid && btnStatusSubmitDiscrepancia">Guardar Datos</button>
+              </div>
+              <div class="col-5 d-flex justify-content-end">
+                <button type="button" class="btn btn-secondary" (click)="resetForm()">Cancelar</button>
+              </div>
+            </div>
+
+          </form>
+
+        </div>
+
+        <!-- CORREGIR EL CONTEO -->
+        <div class="card card-formulario" *ngIf="!selectedProducto && pesajeCorregir">
+          <button class="btn btn-secondary btn-sm" (click)="cancelarCorreccion()" *ngIf="pesajeCorregir">Cancelar
+            corrección</button>
+          <h5><strong>Buscar referencia</strong></h5>
+          <div class="input-group mb-3">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <div class="form-floating">
+              <input type="text" class="form-control" name="buscar" id="floatingInput" placeholder="Buscar"
+                autocomplete="off" (keyup)="searchItems($event)" required>
+              <label for="floatingInput">Buscar Item</label>
+
+            </div>
+
+          </div>
+          <div style="font-size: .875em;">
+            Por favor, ingresa al menos 3 caracteres.
+          </div>
+
+          <div class="mb-3 mt-3" *ngIf="itemsData.length != 0">
+            <h5>Productos</h5>
+            <cdk-virtual-scroll-viewport itemSize="50" class="example-viewport">
+              <div class="card" style="margin-bottom: 20px;" *cdkVirtualFor="let item of itemsData">
+                <div class="card-body">
+                  <td class="td-info">
+                    <div class="content-ilustration">
+                      <div class="ilustration">
+                        <i class="bi bi-box"></i>
+                      </div>
+                      {{item.descripcion}}
+                    </div>
+                  </td>
+                  <td class="td-info">
+                    <div class="v-separator"></div>
+                  </td>
+                  <td class="td-info">Referencia: {{item.referencia}}</td>
+                  <td class="td-info">
+                    <div class="v-separator"></div>
+                  </td>
+                  <td class="td-info">Código: {{item.codigoItem}}</td>
+                  <td class="td-info">
+                    <div class="v-separator"></div>
+                  </td>
+                  <td class="td-info">
+                    <button class="btn btn-sm btn-outline-primary" (click)=" selectedItemDetails(item)">
+                      <i class="bi bi-plus-circle-fill"></i>
+                    </button>
+                  </td>
+                </div>
+              </div>
+            </cdk-virtual-scroll-viewport>
+
+
+          </div>
+
+        </div>
+
+        <div class="card card-formulario mt-3" *ngIf="selectedProducto && pesajeCorregir">
+
+          <h5><strong>FORMULARIO CORREGIR CONTEO</strong></h5>
+
+          <form (ngSubmit)="onSubmitCorregir()" [formGroup]="miFormulario">
+
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_canastas')}"
+                formControlName="numero_canastas" name="numero_canastas" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Número Canastas</label>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_canastillas')}"
+                formControlName="numero_canastillas" name="numero_canastillas" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Número Canastillas</label>
+            </div>
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_bultos')}"
+                formControlName="numero_bultos" name="numero_bultos" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Número Bultos</label>
+            </div>
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('numero_cajas')}"
+                formControlName="numero_cajas" name="numero_cajas" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Número Cajas</label>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('carreta')}"
+                formControlName="carreta" name="carreta" id="floatingInput" placeholder="nombre" autocomplete="off"
+                required>
+              <label for="floatingInput">Carreta</label>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('kg_pesados')}"
+                formControlName="kg_pesados" name="kg_pesados" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">KG Pesados</label>
+            </div>
+
+            <div class="form-floating mb-4">
+              <input type="text" class="form-control" [ngClass]="{'is-invalid': campoEsInvalido('unidades_contadas')}"
+                formControlName="unidades_contadas" name="unidades_contadas" id="floatingInput" placeholder="nombre"
+                autocomplete="off" required>
+              <label for="floatingInput">Unidades Contadas</label>
+            </div>
+
+            <div class="row">
+              <div class="col-5">
+                <button type="submit" class="btn btn-primary "
+                  [disabled]="miFormulario.pristine || miFormulario.invalid && btnStatusSubmitCorregir">Guardar Datos</button>
+              </div>
+              <div class="col-5 d-flex justify-content-end">
+                <button type="button" class="btn btn-secondary" (click)="cancelarCorreccion()">Cancelar</button>
+              </div>
+            </div>
+
+          </form>
+
+        </div>
+
+        <!-- REGISTRO DE LOS CONTEOS -->
+
+        <div class="mt-2" *ngIf="planillaData && !diferencia && !pesajeCorregir">
+          <div class="row">
+            <div class="col-6">
+              <div class="card" *ngFor="let item of conteosDetails">
+                <div class="card-body text-center">
+                  <div class="row ">
+
+                    <h5 class="text-muted">Producto</h5>
+                    <h4><Strong>{{item.producto.descripcion}}</Strong></h4>
+
+                  </div>
+                  <div class="row">
+                    <div class="col-6">
+                      <p class="text-muted">Referencia</p>
+                      <h6><strong>{{item.producto.referencia}}</strong></h6>
+                    </div>
+
+                    <div class="col-6">
+                      <p class="text-muted">Conteo</p>
+                      <h6><Strong>{{item.conteo.numero_conteo}}</Strong></h6>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-6">
+                      <p class="text-muted">Carreta</p>
+                      <h6><Strong>{{item.carreta}}</Strong></h6>
+                    </div>
+
+                    <div class="col-6">
+                      <p class="text-muted">Número de conteo</p>
+                      <h6><strong>{{item.numero_conteo}}</strong></h6>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-6">
+                      <p class="text-muted">Número Canastas</p>
+                      <h6><Strong>{{item.numero_canastas}}</Strong></h6>
+                    </div>
+                    <div class="col-6">
+                      <p class="text-muted">Número Canastillas</p>
+                      <h6><strong>{{item.numero_canastillas}}</strong></h6>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-6">
+                      <p class="text-muted">Número Bultos</p>
+                      <h6><Strong>{{item.numero_bultos}}</Strong></h6>
+                    </div>
+                    <div class="col-6">
+                      <p class="text-muted">Número Cajas</p>
+                      <h6><strong>{{item.numero_cajas}}</strong></h6>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-6">
+                      <p class="text-muted">KG Pesados</p>
+                      <h6><Strong>{{item.kg_pesados}}</Strong></h6>
+                    </div>
+                    <div class="col-6">
+                      <p class="text-muted">Unidades Contadas</p>
+                      <h6><strong>{{item.unidades_contadas}}</strong></h6>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+
+</div>
+
+
+<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+  aria-labelledby="staticBackdropLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="staticBackdropLabel">Firmas</h1>
+      </div>
+      <div class="modal-body">
+
+        <div class="card text-center mx-auto" style="width: 14rem;  margin-bottom: 20px;" *ngIf="faltan">
+          <div class="card-body">
+            <h5> {{faltan.faltanPorFirmar}} de {{faltan.colaboradores}}</h5>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;" *ngFor="let item of firmados">
+          <div class="card-body">
+            <td class="td-info">
+              <div class="content-ilustration">
+                <div class="ilustration">
+                  <i class="bi bi-person-workspace"></i>
+                </div>
+                {{item.colaborador.nombre}}
+              </div>
+            </td>
+            <td class="td-info">
+              <div class="v-separator"></div>
+            </td>
+            <td class="td-info">{{item.colaborador.perfil}}</td>
+            <td class="td-info">
+              <div class="v-separator"></div>
+            </td>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="modalResumenGeneral" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Resumen General</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center " *ngIf="dataResumenInventario">
+        <div class="row">
+          <div class="col-4 mb-4">
+            <div class="card">
+              <div class="card-body">
+                <h5>{{dataResumenInventario.suma_unidades}}</h5>
+                <p class="text-muted fw-bold">UNIDADES</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-4 mb-4">
+            <div class="card">
+              <div class="card-body">
+                <h5>{{dataResumenInventario.suma_kilos | number : "1.0-2"}}</h5>
+                <p class="text-muted fw-bold">KILOGRAMOS BRUTOS</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-4 mb-4">
+            <div class="card">
+              <div class="card-body">
+                <h5>{{dataResumenInventario.kg_neto | number : "1.0-2"}}</h5>
+                <p class="text-muted fw-bold">KILOGRAMOS NETOS</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-4 mb-4">
+            <div class="card">
+              <div class="card-body">
+                <h5>{{dataResumenInventario.numero_canastas}}</h5>
+                <p class="text-muted fw-bold">CANASTAS</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-4 mb-4">
+            <div class="card">
+              <div class="card-body">
+                <h5>{{dataResumenInventario.numero_bultos}}</h5>
+                <p class="text-muted fw-bold">BULTOS</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-4 mb-4">
+            <div class="card">
+              <div class="card-body">
+                <h5>{{dataResumenInventario.numero_canastillas}}</h5>
+                <p class="text-muted fw-bold">CANASTILLAS</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-4 mb-4">
+            <div class="card">
+              <div class="card-body">
+                <h5>{{dataResumenInventario.carreta}}</h5>
+                <p class="text-muted fw-bold">CARRETA</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
