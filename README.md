@@ -53,7 +53,7 @@ cem-logistica/
 1. Clona el repositorio:
 
 ```bash
-git clone https://github.com/tu_usuario/incubant_web.git
+git clone https://github.com/tu_usuario/cem-logistica.git
 cd incubant_web
 ```
 
