@@ -1,0 +1,112 @@
+.despacho-modulo .card {
+  max-width: 720px;
+}
+
+.despacho-modulo--wide .card,
+.despacho-modulo--wide {
+  max-width: none;
+}
+
+.despacho-modulo .card-body p:last-child {
+  margin-bottom: 0;
+}
+
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.acciones-cell {
+  white-space: nowrap;
+}
+
+.btn-link-accion {
+  background: none;
+  border: none;
+  color: #005eb8;
+  padding: 0 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-link-accion:hover {
+  text-decoration: underline;
+}
+
+.content-title {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.content-ilustration {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.ilustration {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  margin-right: 10px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px;
+  border: solid 1px var(--color-neutral-n30);
+  background-color: #9da1af;
+  color: white;
+}
+
+.input-search {
+  width: 40%;
+  border-radius: 10px;
+  border: 1px solid #dee2e6;
+}
+
+.search-icon {
+  background-color: #0000;
+  border: none;
+}
+
+.search-input {
+  border-radius: 10px;
+  border: none;
+}
+
+.btn-delete:hover {
+  color: #c50000;
+}
+
+.offcanvas-header {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.offcanvas-body {
+  padding-bottom: 24vh;
+}
+
+.offcanvas-footer {
+  padding: 1rem 1rem;
+  border-top: 1px solid #dee2e6;
+}
+
+table {
+  width: 100%;
+}
+
+@media screen and (max-width: 600px) {
+  .input-search {
+    width: 100%;
+  }
+}

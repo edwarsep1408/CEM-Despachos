@@ -1,0 +1,158 @@
+<div class="content-title">
+  <div>
+    <h3>Usuarios</h3>
+    <p class="text-muted small mb-0">
+      El cargo se define al crear la cuenta. Supervisor de logística y auxiliar de calidad no usan el sistema: solo guardan la firma para el certificado.
+      Los usuarios no se eliminan: se inactivan y se pueden volver a activar.
+    </p>
+  </div>
+  <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+    <div class="input-group input-search">
+      <span class="input-group-text search-icon"><i class="ri-search-line"></i></span>
+      <input type="text" class="form-control search-input" (keyup)="applyFilter($event)" placeholder="Buscar">
+    </div>
+    <button type="button" class="btn btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasUsuario">
+      <i class="ri-add-circle-fill"></i> Nuevo usuario
+    </button>
+  </div>
+</div>
+
+<div class="mat-elevation-z4">
+  <table mat-table [dataSource]="dataSource" matSort>
+    <ng-container matColumnDef="usuario">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>USUARIO</th>
+      <td mat-cell *matCellDef="let row">{{ row.usuario }}</td>
+    </ng-container>
+    <ng-container matColumnDef="nombre">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>NOMBRE</th>
+      <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+    </ng-container>
+    <ng-container matColumnDef="cargo">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>CARGO</th>
+      <td mat-cell *matCellDef="let row">{{ detalleCargo(row) }}</td>
+    </ng-container>
+    <ng-container matColumnDef="firma">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>FIRMA</th>
+      <td mat-cell *matCellDef="let row">
+        <span *ngIf="esFirma(row.cargo) && (row.tieneFirma || row.firma)">Guardada</span>
+        <span *ngIf="esFirma(row.cargo) && !(row.tieneFirma || row.firma)" class="text-muted">Sin guardar</span>
+        <span *ngIf="!esFirma(row.cargo)" class="text-muted">No aplica</span>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="perfil">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>PERFIL</th>
+      <td mat-cell *matCellDef="let row">{{ nombrePerfil(row) }}</td>
+    </ng-container>
+    <ng-container matColumnDef="estado">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>ESTADO</th>
+      <td mat-cell *matCellDef="let row">
+        <span *ngIf="row.activo !== false">Activo</span>
+        <span *ngIf="row.activo === false" class="text-muted">Inactivo</span>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="acciones">
+      <th mat-header-cell *matHeaderCellDef>ACCIONES</th>
+      <td mat-cell *matCellDef="let row">
+        <button class="btn btn-edit" data-bs-toggle="offcanvas" data-bs-target="#offcanvasUsuarioEdit" (click)="onClickDato(row)">
+          <i class="bi bi-pencil-square"></i>
+        </button>
+        <button *ngIf="row.activo !== false" class="btn btn-delete" title="Inactivar" (click)="onInactivar(row)">
+          <i class="bi bi-person-dash-fill"></i>
+        </button>
+        <button *ngIf="row.activo === false" class="btn btn-activar" title="Activar" (click)="onActivar(row)">
+          <i class="bi bi-person-check-fill"></i>
+        </button>
+      </td>
+    </ng-container>
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.fila-inactiva]="row.activo === false"></tr>
+  </table>
+  <mat-paginator [pageSizeOptions]="[10, 20, 50]" showFirstLastButtons></mat-paginator>
+</div>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasUsuario">
+  <form (submit)="onSubmit()" #AddForm="ngForm">
+    <div class="offcanvas-header"><h6 class="offcanvas-title">Nuevo usuario</h6></div>
+    <div class="offcanvas-body">
+      <div class="form-floating mb-3">
+        <input class="form-control" [(ngModel)]="addForm.usuario" name="usuario" required placeholder="usuario">
+        <label>Usuario</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input class="form-control" [(ngModel)]="addForm.nombre" name="nombre" required placeholder="nombre">
+        <label>Nombre</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input class="form-control" type="password" [(ngModel)]="addForm.password" name="password" required placeholder="contraseña">
+        <label>Contraseña</label>
+      </div>
+      <div class="form-floating mb-3">
+        <select class="form-select" [(ngModel)]="addForm.cargo" name="cargo" required (ngModelChange)="onCargoChange(addForm)">
+          <option value="" disabled>Seleccione el cargo</option>
+          <option *ngFor="let cargo of cargos" [value]="cargo.codigo">{{ cargo.etiqueta }}</option>
+        </select>
+        <label>Cargo</label>
+      </div>
+      <div class="form-floating mb-3" *ngIf="addForm.cargo && !esFirma(addForm.cargo)">
+        <select class="form-select" [(ngModel)]="addForm.perfil" name="perfil" required>
+          <option value="" disabled>Seleccione un perfil</option>
+          <option *ngFor="let perfil of perfiles" [value]="perfil._id">{{ perfil.nombre }}</option>
+        </select>
+        <label>Perfil</label>
+      </div>
+      <p class="small text-muted" *ngIf="esFirma(addForm.cargo)">
+        No entra al sistema. En el celular abre <strong>/mi-firma</strong>, guarda el trazo una vez y ese sello sale en el certificado.
+      </p>
+    </div>
+    <div class="offcanvas-footer d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="AddForm.invalid">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasUsuarioEdit">
+  <form (submit)="onUpdate()" #EditForm="ngForm">
+    <div class="offcanvas-header"><h6 class="offcanvas-title">Editar usuario</h6></div>
+    <div class="offcanvas-body">
+      <div class="form-floating mb-3">
+        <input class="form-control" [(ngModel)]="editForm.usuario" name="usuario" required>
+        <label>Usuario</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input class="form-control" [(ngModel)]="editForm.nombre" name="nombre" required>
+        <label>Nombre</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input class="form-control" type="password" [(ngModel)]="editForm.password" name="password" placeholder="nueva contraseña">
+        <label>Nueva contraseña (opcional)</label>
+      </div>
+      <div class="form-floating mb-3">
+        <select class="form-select" [(ngModel)]="editForm.cargo" name="cargo" required (ngModelChange)="onCargoChange(editForm)">
+          <option value="" disabled>Seleccione el cargo</option>
+          <option *ngFor="let cargo of cargos" [value]="cargo.codigo">{{ cargo.etiqueta }}</option>
+        </select>
+        <label>Cargo</label>
+      </div>
+      <div class="form-floating mb-3" *ngIf="editForm.cargo && !esFirma(editForm.cargo)">
+        <select class="form-select" [(ngModel)]="editForm.perfil" name="perfil" required>
+          <option value="" disabled>Seleccione un perfil</option>
+          <option *ngFor="let perfil of perfiles" [value]="perfil._id">{{ perfil.nombre }}</option>
+        </select>
+        <label>Perfil</label>
+      </div>
+      <p class="small text-muted" *ngIf="esFirma(editForm.cargo)">
+        No entra al sistema. Firma una vez en <strong>/mi-firma</strong>.
+        <span *ngIf="editForm.tieneFirma && !editForm.borrarFirma"> Ya tiene firma guardada.</span>
+      </p>
+      <div class="form-check mb-3" *ngIf="editForm.tieneFirma">
+        <input class="form-check-input" type="checkbox" id="editBorrarFirma" [(ngModel)]="editForm.borrarFirma" name="borrarFirma">
+        <label class="form-check-label" for="editBorrarFirma">Borrar firma guardada</label>
+      </div>
+    </div>
+    <div class="offcanvas-footer d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas" data-bs-dismiss-edit="true">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="EditForm.invalid">Guardar</button>
+    </div>
+  </form>
+</div>

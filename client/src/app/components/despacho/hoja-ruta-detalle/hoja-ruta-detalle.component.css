@@ -1,0 +1,122 @@
+.hoja-detalle {
+  padding: 8px 4px 32px;
+}
+
+.hoja-detalle-titulo {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 4px 0 16px;
+}
+
+.hoja-meta {
+  margin: 0 0 16px;
+}
+
+.hoja-meta > div {
+  display: grid;
+  grid-template-columns: 220px minmax(120px, 1fr);
+  gap: 8px 16px;
+  margin-bottom: 2px;
+}
+
+.hoja-meta dt,
+.hoja-meta dd {
+  margin: 0;
+}
+
+.hoja-meta dt {
+  font-weight: 700;
+  color: #1e3a8a;
+  text-align: right;
+}
+
+.hoja-factura {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+
+.hoja-factura label {
+  margin: 0;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.hoja-factura .form-control {
+  width: 180px;
+}
+
+.hoja-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+.hoja-xsl {
+  width: auto;
+  min-width: 150px;
+}
+
+.hoja-totales {
+  margin-top: 10px;
+  font-weight: 700;
+}
+
+.hoja-dialog {
+  width: min(480px, 94vw);
+  background: #fff;
+  border-radius: 8px;
+  padding: 18px 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+}
+
+.hoja-dialog h5 {
+  margin-bottom: 16px;
+}
+
+.hoja-form-row {
+  display: grid;
+  grid-template-columns: 150px minmax(160px, 1fr);
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.hoja-form-row label {
+  margin: 0;
+  font-weight: 700;
+  color: #1e3a8a;
+  text-align: right;
+}
+
+.hoja-dialog-acciones {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  margin-left: 162px;
+}
+
+.hoja-uso {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 99px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.hoja-uso-bar {
+  height: 100%;
+  background: #16a34a;
+}
+
+.hoja-uso-bar[data-exceso="true"] {
+  background: #dc2626;
+}
+
+.hoja-facturas-filtros {
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+}

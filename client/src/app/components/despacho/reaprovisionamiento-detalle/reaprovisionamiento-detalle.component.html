@@ -1,0 +1,121 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bx-transfer page-banner-icon"></i>
+    <div>
+      <h1>Reaprovisionamiento CEDIS</h1>
+      <p *ngIf="doc">
+        {{ doc.idEnc }} · {{ doc.estado }}{{ doc.idCargue ? " · cargue " + doc.idCargue : "" }} · origen {{ doc.bodegaOrigen }} → CEDIS {{ doc.bodegaDestino }}
+        {{ doc.bodegaDestinoNombre }}. Para despacharlo: Cargues → Agregar reaprovisionamiento CEDIS.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="cargando" class="spinner-container">
+  <mat-progress-spinner mode="indeterminate" diameter="50" color="primary"></mat-progress-spinner>
+</div>
+
+<div class="despacho-modulo despacho-modulo--wide" *ngIf="!cargando && doc">
+  <div class="cargue-links">
+    <button type="button" class="btn-link-accion" *ngIf="editable" (click)="guardar()" [disabled]="guardando">[Guardar]</button>
+    <button type="button" class="btn-link-accion" *ngIf="editable" (click)="aprobar()">[Aprobar]</button>
+    <button type="button" class="btn-link-accion" *ngIf="doc.estado === 'aprobado'" (click)="enviarSiesa()">[Enviar a SIESA]</button>
+    <a routerLink="/configuracion/despacho/cargues" class="btn-link-accion">Ir a cargues</a>
+    <button type="button" class="btn-link-accion" *ngIf="doc.estado !== 'anulado' && doc.estado !== 'despachando' && doc.estado !== 'despachado'" (click)="anular()">[Anular]</button>
+    <a routerLink="/configuracion/despacho/reaprovisionamiento" class="btn-link-accion">Volver</a>
+  </div>
+
+  <dl class="reapro-meta">
+    <div><dt>ID</dt><dd>{{ doc.idEnc }}</dd></div>
+    <div><dt>FECHA</dt><dd>{{ doc.fecha }}</dd></div>
+    <div><dt>USUARIO</dt><dd>{{ doc.usuario }}</dd></div>
+    <div><dt>ESTADO</dt><dd>{{ doc.estado }}</dd></div>
+    <div><dt>CARGUE</dt><dd>{{ doc.idCargue || "—" }}</dd></div>
+    <div><dt>ORIGEN</dt><dd>{{ doc.bodegaOrigen }} {{ doc.bodegaOrigenNombre }}</dd></div>
+    <div><dt>CEDIS</dt><dd>{{ doc.bodegaDestino }} {{ doc.bodegaDestinoNombre }}</dd></div>
+    <div><dt>ARCHIVO</dt><dd>{{ doc.archivoNombre || "—" }}</dd></div>
+    <div><dt>SIESA</dt><dd>{{ doc.envioSiesa?.estado || "pendiente" }}</dd></div>
+  </dl>
+
+  <p class="small text-warning" *ngIf="doc.avisos?.length">
+    {{ doc.avisos.length }} referencia(s) no están en el catálogo de ítems; se cargaron con la descripción del Excel.
+  </p>
+
+  <label class="reapro-obs">Observación
+    <input
+      type="text"
+      class="form-control"
+      [(ngModel)]="observacion"
+      [readonly]="!editable"
+      (blur)="onObsBlur()"
+    />
+  </label>
+
+  <div class="reapro-add" *ngIf="editable">
+    <div class="reapro-search">
+      <input
+        type="text"
+        class="form-control"
+        placeholder="Buscar ítem (referencia o descripción)"
+        [(ngModel)]="busqueda"
+        (ngModelChange)="onBuscar()"
+        autocomplete="off"
+      />
+      <ul class="reapro-suggest" *ngIf="resultados.length">
+        <li *ngFor="let item of resultados" (click)="elegirItem(item)">
+          <strong>{{ item.referencia || item.codigoItem }}</strong>
+          <span>{{ item.descripcion }}</span>
+          <em>{{ item.undInventario }}</em>
+        </li>
+      </ul>
+      <p class="small text-muted mb-0" *ngIf="buscando">Buscando…</p>
+      <p class="small text-muted mb-0" *ngIf="itemSel">
+        Seleccionado: {{ itemSel.referencia || itemSel.codigoItem }} · {{ itemSel.descripcion }}
+      </p>
+    </div>
+    <label>Unidades
+      <input type="number" class="form-control" [(ngModel)]="unidades" min="0" step="1" />
+    </label>
+    <label>Kilos
+      <input type="number" class="form-control" [(ngModel)]="kilos" min="0" step="0.01" />
+    </label>
+    <button type="button" class="btn btn-primary align-self-end" (click)="agregarLinea()">Agregar</button>
+  </div>
+
+  <div class="mat-elevation-z4">
+    <table class="table table-sm mb-0 cargues-tabla">
+      <thead>
+        <tr>
+          <th *ngIf="editable"></th>
+          <th>REFERENCIA</th>
+          <th>DESCRIPCION</th>
+          <th>UND</th>
+          <th>UNIDADES</th>
+          <th>KILOS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let linea of lineas">
+          <td *ngIf="editable">
+            <button type="button" class="btn-link-accion" (click)="quitarLinea(linea)">[quitar]</button>
+          </td>
+          <td>{{ linea.referencia }}</td>
+          <td>{{ linea.descripcion }}</td>
+          <td>{{ linea.undInventario || "—" }}</td>
+          <td>{{ linea.unidades | number:'1.0-2' }}</td>
+          <td>{{ linea.kilos | number:'1.2-2' }}</td>
+        </tr>
+        <tr *ngIf="!lineas.length">
+          <td [attr.colspan]="editable ? 6 : 5" class="text-muted py-3">
+            Sin líneas. Busque ítems y capture unidades y kilos como en un pedido.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small mt-2 mb-0">
+    <strong>Total kilos = {{ totalPeso | number:'1.2-2' }}</strong>
+    · unidades {{ totalUnidades | number:'1.0-2' }}
+    · {{ lineas.length }} líneas
+  </p>
+</div>

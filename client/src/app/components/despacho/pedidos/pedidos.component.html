@@ -1,0 +1,393 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bx-clipboard page-banner-icon"></i>
+    <div>
+      <h1>Pedidos</h1>
+      <p>Vista básica del pedido (ítems y cantidades) e impresión de picking para piso.</p>
+    </div>
+  </div>
+</div>
+
+<div class="despacho-modulo despacho-modulo--wide">
+  <div class="content-title pedidos-toolbar">
+    <div>
+      <h3>Pedidos de venta</h3>
+      <p class="text-muted small mb-0">
+        {{ filtrados.length }} de {{ total }} registros
+        <span *ngIf="rangoTexto"> · {{ rangoTexto }}</span>
+        <span *ngIf="consulta"> · {{ consulta }}</span>
+      </p>
+    </div>
+    <div class="pedidos-vista-tabs">
+      <button
+        type="button"
+        class="btn"
+        [class.btn-primary]="vista === 'estandar'"
+        [class.btn-outline-primary]="vista !== 'estandar'"
+        (click)="cambiarVista('estandar')"
+      >
+        Vista básica
+      </button>
+      <button
+        type="button"
+        class="btn"
+        [class.btn-primary]="vista === 'impresion'"
+        [class.btn-outline-primary]="vista !== 'impresion'"
+        (click)="cambiarVista('impresion')"
+      >
+        Vista de impresión
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="sincronizar()"
+        [disabled]="sincronizando"
+      >
+        <i class="bx bx-refresh"></i>
+        {{ sincronizando ? 'Sincronizando…' : 'Sincronizar SIESA' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="card pedidos-filtros mb-3">
+    <div class="card-body">
+      <p class="text-muted small mb-2">
+        Desde / hasta son la fecha del documento (f430_id_fecha) y se envían a
+        Connekta v3 como fechaDesde / fechaHasta. Ejemplo: 2025-12-26 a 2025-12-31.
+      </p>
+      <div class="pedidos-filtros-grid">
+        <label>Desde
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.desde" (ngModelChange)="cambiarFechas()" [disabled]="sincronizando" />
+        </label>
+        <label>Hasta
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.hasta" (ngModelChange)="cambiarFechas()" [disabled]="sincronizando" />
+        </label>
+        <label>COD_VENDEDOR
+          <select class="form-select form-select-sm" [(ngModel)]="filtros.vendedor" (ngModelChange)="aplicarFiltros()">
+            <option value="">Predet</option>
+            <option *ngFor="let item of vendedores" [value]="item">{{ item }}</option>
+          </select>
+        </label>
+        <label>Tipo
+          <select class="form-select form-select-sm" [(ngModel)]="filtros.tipoDocto" (ngModelChange)="aplicarFiltros()">
+            <option value="">Predet</option>
+            <option *ngFor="let item of tiposDocto" [value]="item">{{ item }}</option>
+          </select>
+        </label>
+        <label>Razón social
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.cliente" (ngModelChange)="aplicarFiltros()" />
+        </label>
+        <label>Pedido
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.pedido" (ngModelChange)="aplicarFiltros()" />
+        </label>
+        <label>Bodega
+          <select class="form-select form-select-sm" [(ngModel)]="filtros.bodega" (ngModelChange)="aplicarFiltros()">
+            <option value="">Predet</option>
+            <option *ngFor="let item of bodegas" [value]="item">{{ item }}</option>
+          </select>
+        </label>
+        <label>Sucursal
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.sucursal" (ngModelChange)="aplicarFiltros()" />
+        </label>
+        <label>Estado
+          <select class="form-select form-select-sm" [(ngModel)]="filtros.estado" (ngModelChange)="aplicarFiltros()">
+            <option value="">Predet</option>
+            <option *ngFor="let item of estados" [value]="item">{{ item }}</option>
+          </select>
+        </label>
+        <ng-container *ngIf="vista === 'impresion'">
+          <label>barrio
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.barrio" (ngModelChange)="aplicarFiltros()" />
+          </label>
+          <label>municipio
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.municipio" (ngModelChange)="aplicarFiltros()" />
+          </label>
+          <label>nit
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.nit" (ngModelChange)="aplicarFiltros()" />
+          </label>
+          <label>barrio_ped
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.barrioPed" (ngModelChange)="aplicarFiltros()" />
+          </label>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+
+  <div class="pedidos-acciones mb-3">
+    <ng-container *ngIf="vista === 'impresion'">
+      <button type="button" class="btn btn-primary btn-sm" (click)="imprimirMarcados()">
+        Imprimir (PDF)
+      </button>
+      <button type="button" class="btn btn-outline-primary btn-sm" (click)="imprimirMarcados()">
+        Imprimir marcados
+      </button>
+      <button type="button" class="btn btn-outline-primary btn-sm" (click)="imprimirTodos()">
+        Imprimir todos
+      </button>
+      <span class="pedidos-sel">
+        Seleccionar:
+        <button type="button" class="btn-link-accion" (click)="seleccionarTodos()">Todos</button>
+        |
+        <button type="button" class="btn-link-accion" (click)="seleccionarNinguno()">Ninguno</button>
+      </span>
+    </ng-container>
+    <button type="button" class="btn btn-outline-primary btn-sm" (click)="exportarExcel()">
+      Exportar a excel
+    </button>
+  </div>
+
+  <div class="pedidos-tabla-wrap">
+    <div *ngIf="cargando" class="spinner-container pedidos-tabla-spinner">
+      <mat-progress-spinner mode="indeterminate" diameter="50" color="primary">
+      </mat-progress-spinner>
+    </div>
+    <div class="mat-elevation-z4 table-scroll">
+    <table mat-table [dataSource]="dataSource" matSort>
+      <ng-container matColumnDef="sel">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let row">
+          <input
+            type="checkbox"
+            [checked]="estaSel(row.idEnc)"
+            (change)="toggleSel(row.idEnc, $any($event.target).checked)"
+          />
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let row" class="acciones-cell">
+          <button type="button" class="btn-link-accion" (click)="ver(row)">ver</button>
+          <button type="button" class="btn-link-accion" *ngIf="vista === 'impresion'" (click)="editar(row)">editar</button>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="idEnc">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>PEDIDO</th>
+        <td mat-cell *matCellDef="let row">{{ etiquetaPedido(row) }}</td>
+      </ng-container>
+      <ng-container matColumnDef="nit">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>NIT</th>
+        <td mat-cell *matCellDef="let row">{{ row.nit }}</td>
+      </ng-container>
+      <ng-container matColumnDef="sucursal">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>SUCURSAL</th>
+        <td mat-cell *matCellDef="let row">{{ row.sucursal }}</td>
+      </ng-container>
+      <ng-container matColumnDef="sucursalDescripcion">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>SUCURSAL</th>
+        <td mat-cell *matCellDef="let row">{{ row.sucursalDescripcion || row.sucursal }}</td>
+      </ng-container>
+      <ng-container matColumnDef="cliente">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>RAZÓN SOCIAL</th>
+        <td mat-cell *matCellDef="let row">{{ row.cliente }}</td>
+      </ng-container>
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>ESTADO</th>
+        <td mat-cell *matCellDef="let row">{{ row.estado }}</td>
+      </ng-container>
+      <ng-container matColumnDef="idCargue">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>CARGUE</th>
+        <td mat-cell *matCellDef="let row">{{ row.idCargue || "" }}</td>
+      </ng-container>
+      <ng-container matColumnDef="barrio">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>BARRIO</th>
+        <td mat-cell *matCellDef="let row">{{ row.barrio }}</td>
+      </ng-container>
+      <ng-container matColumnDef="municipio">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>MUNICIPIO</th>
+        <td mat-cell *matCellDef="let row">{{ row.municipio }}</td>
+      </ng-container>
+      <ng-container matColumnDef="direccion">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>DIRECCIÓN</th>
+        <td mat-cell *matCellDef="let row">{{ row.direccion }}</td>
+      </ng-container>
+      <ng-container matColumnDef="telefono">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>TELÉFONO</th>
+        <td mat-cell *matCellDef="let row">{{ row.telefono }}</td>
+      </ng-container>
+      <ng-container matColumnDef="observacion">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>OBSERVACIÓN</th>
+        <td mat-cell *matCellDef="let row">{{ row.observacion }}</td>
+      </ng-container>
+      <ng-container matColumnDef="codigo">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>COD_VENDEDOR</th>
+        <td mat-cell *matCellDef="let row">{{ row.codigo }}</td>
+      </ng-container>
+      <ng-container matColumnDef="fecha">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>FECHA</th>
+        <td mat-cell *matCellDef="let row">{{ row.fecha }}</td>
+      </ng-container>
+      <ng-container matColumnDef="hora">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>HORA</th>
+        <td mat-cell *matCellDef="let row">{{ row.hora }}</td>
+      </ng-container>
+      <ng-container matColumnDef="valor">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>VALOR TOTAL</th>
+        <td mat-cell *matCellDef="let row">{{ row.valor ? (row.valor | number:'1.2-2') : '' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="cp">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>CP</th>
+        <td mat-cell *matCellDef="let row">{{ row.cp }}</td>
+      </ng-container>
+      <ng-container matColumnDef="enRuta">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>ENRUTA</th>
+        <td mat-cell *matCellDef="let row">{{ row.enRuta }}</td>
+      </ng-container>
+      <ng-container matColumnDef="bodega">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>BODEGA</th>
+        <td mat-cell *matCellDef="let row">{{ row.bodega }}</td>
+      </ng-container>
+      <ng-container matColumnDef="barrioPed">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>BARRIO_PED</th>
+        <td mat-cell *matCellDef="let row">{{ row.barrioPed }}</td>
+      </ng-container>
+      <ng-container matColumnDef="direccionPed">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>DIRECCION_PED</th>
+        <td mat-cell *matCellDef="let row">{{ row.direccionPed }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+    <div class="pedidos-footer">
+      <span><strong>Total (valor):</strong> {{ totalValor | number:'1.2-2' }}</span>
+      <span>Total: {{ filtrados.length }} registros</span>
+    </div>
+    <mat-paginator [pageSizeOptions]="[10, 20, 50]" showFirstLastButtons>
+    </mat-paginator>
+  </div>
+  </div>
+</div>
+
+<div class="picking-overlay" *ngIf="picking || cargandoPicking">
+  <div class="picking-panel" [class.picking-panel--wide]="detalleModo === 'picking'">
+    <div class="picking-panel-bar">
+      <strong>{{ detalleModo === 'comercial' ? 'Pedido Default' : 'Impresión de pedido' }} {{ picking ? etiquetaPedido(picking) : '' }}</strong>
+      <div>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          [disabled]="!picking"
+          (click)="imprimirPicking()"
+        >
+          Imprimir (PDF)
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-primary btn-sm"
+          *ngIf="detalleModo === 'comercial'"
+          [disabled]="!picking"
+          (click)="exportarLineas()"
+        >
+          Exportar a excel
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cerrarPicking()">Cerrar</button>
+      </div>
+    </div>
+    <div class="spinner-container" *ngIf="cargandoPicking">
+      <mat-progress-spinner mode="indeterminate" diameter="40" color="primary"></mat-progress-spinner>
+    </div>
+
+    <div class="picking-sheet" *ngIf="picking && detalleModo === 'comercial'">
+      <div class="picking-head">
+        <div>
+          <h2>Pedido Default</h2>
+          <p><b>Pedido No:</b> {{ etiquetaPedido(picking) }}</p>
+          <p><b>Fecha:</b> {{ fechaDe(picking) || '—' }}</p>
+          <p><b>Cliente:</b> {{ picking.cliente || '—' }}</p>
+          <p><b>Contacto:</b> {{ picking.contacto || picking.sucursalDescripcion || picking.cliente || '—' }}</p>
+          <p><b>nit:</b> {{ nitDe(picking) || '—' }}</p>
+          <p><b>Vendedor:</b> {{ picking.vendedor || picking.codigo || '—' }}</p>
+          <p><b>Observación:</b> {{ picking.observacion || '—' }}</p>
+        </div>
+        <img src="assets/img/LOGOTIPO.svg" alt="CEM" class="picking-logo" />
+      </div>
+
+      <table class="picking-comercial">
+        <thead>
+          <tr>
+            <th>CODIGO</th>
+            <th>PRODUCTO</th>
+            <th>UND</th>
+            <th>V_UNIT</th>
+            <th>VALOR</th>
+            <th>KG</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let linea of lineasPagina">
+            <td>{{ linea.codigo }}</td>
+            <td>{{ linea.producto }}</td>
+            <td>{{ linea.unidades }}</td>
+            <td>{{ linea.vUnit ? (linea.vUnit | number:'1.0-2') : '' }}</td>
+            <td>{{ linea.valor ? (linea.valor | number:'1.2-2') : '' }}</td>
+            <td>{{ linea.kilo }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="pedidos-footer">
+        <span><strong>Total (valor):</strong> {{ totalDetalle | number:'1.2-2' }}</span>
+        <span>Página {{ lineaPagina + 1 }} de {{ totalPaginasLineas }} · Total Registros: {{ picking.lineas.length }}</span>
+      </div>
+      <div class="detalle-pager" *ngIf="picking.lineas.length > lineasPorPagina">
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="lineaPagina = 0" [disabled]="lineaPagina === 0">«</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="lineaPagina = lineaPagina - 1" [disabled]="lineaPagina === 0">‹</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="lineaPagina = lineaPagina + 1" [disabled]="lineaPagina + 1 >= totalPaginasLineas">›</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="lineaPagina = totalPaginasLineas - 1" [disabled]="lineaPagina + 1 >= totalPaginasLineas">»</button>
+      </div>
+    </div>
+
+    <div class="picking-sheet" *ngIf="picking && detalleModo === 'picking'">
+      <div class="picking-head">
+        <div>
+          <h2>Pedido</h2>
+          <p><b>NUMERO:</b> {{ etiquetaPedido(picking) }}</p>
+          <p><b>VENDEDOR:</b> {{ vendedorDe(picking) }}</p>
+          <p><b>NIT:</b> {{ nitDe(picking) || '—' }}</p>
+          <p><b>CLIENTE:</b> {{ picking.cliente || '—' }}</p>
+          <p><b>CONTACTO:</b> {{ picking.contacto || picking.sucursalDescripcion || '' }}</p>
+          <p><b>ESTABLECIMIENTO:</b> {{ picking.establecimiento || picking.cliente || '—' }}</p>
+          <p><b>DIRECCION:</b> {{ picking.direccion || '—' }}</p>
+          <p><b>FECHA:</b> {{ fechaDe(picking) }}</p>
+          <p><b>HORA:</b> {{ horaDe(picking) }}</p>
+          <p><b>DIRECCION_PED:</b> {{ picking.direccionPed || '' }}</p>
+          <p><b>BARRIO_PED:</b> {{ picking.barrioPed || '' }}</p>
+          <p><b>OBSERVACION:</b> {{ picking.observacion || '' }}</p>
+        </div>
+        <img src="assets/img/LOGOTIPO.svg" alt="CEM" class="picking-logo" />
+      </div>
+      <table class="picking-piso">
+        <thead>
+          <tr>
+            <th>CODIGO</th>
+            <th>REFERENCIA</th>
+            <th>UND</th>
+            <th>KG</th>
+            <th></th>
+            <th>KG BRUTO</th>
+            <th>KG NETO</th>
+            <th>UNIDADES</th>
+            <th>CANASTAS</th>
+            <th>BULTOS</th>
+            <th>CAJAS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let linea of picking.lineas">
+            <td>{{ linea.codigo }}</td>
+            <td>{{ linea.producto }}</td>
+            <td>{{ linea.unidades }}</td>
+            <td>{{ linea.kilo }}</td>
+            <td class="dash">----</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="picking-total"><b>Total Registros:</b> {{ picking.lineas.length }}</p>
+    </div>
+  </div>
+</div>

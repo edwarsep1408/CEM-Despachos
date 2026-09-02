@@ -1,0 +1,36 @@
+.cargues-link {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.cargues-link.is-active {
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.hojas-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: flex-end;
+}
+
+.hojas-filtros label {
+  font-size: 0.8rem;
+  color: #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.hojas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+}

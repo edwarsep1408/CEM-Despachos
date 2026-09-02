@@ -9,7 +9,9 @@ bodegaServicios.SincronizacionInventarioUnoee = async () => {
 
     /* url peticion */
     /* const petitionUrlPrueba = 'http://localhost:3001/api/v1/consultarPrueba'; */
-    const petitionUrlPrueba = 'http://192.168.1.252:5015/api/v1/get-existencia-inventario-bodega/13/008';
+    const inventarioApi = process.env.CEM_INVENTARIO_API || 'http://192.168.1.252:5015/api/v1';
+    const idCia = process.env.SIESA_ID_CIA || '13';
+    const petitionUrlPrueba = `${inventarioApi}/get-existencia-inventario-bodega/${idCia}/008`;
     /* http://192.168.1.252:5015/api/v1/get-existencia-inventario-bodega/13/PT001 */
     /* fecha de sincronizacion con inventario unoee */
     const fecha = new Date();
@@ -70,6 +72,9 @@ bodegaServicios.SincronizacionInventarioUnoee = async () => {
                 ];
             }
         })
+        .catch((error) => {
+            console.error('Error sincronizando inventario UnoEE:', error.message);
+        });
 
 };
 

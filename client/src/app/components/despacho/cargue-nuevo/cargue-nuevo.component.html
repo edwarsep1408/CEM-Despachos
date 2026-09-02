@@ -1,0 +1,36 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bx-package page-banner-icon"></i>
+    <div>
+      <h1>Cargues</h1>
+      <p>Seleccione el despachador al que se asignará el cargue.</p>
+    </div>
+  </div>
+</div>
+
+<div class="despacho-modulo">
+  <div class="card">
+    <div class="card-body">
+      <label class="despachador-label">DESPACHADOR</label>
+      <select class="form-select mb-3" [(ngModel)]="despachadorId">
+        <option value="">Seleccione…</option>
+        <option *ngFor="let row of despachadores" [value]="row._id">
+          {{ row.nombre }}
+          <ng-container *ngIf="row.bodega"> — {{ row.bodega }}</ng-container>
+        </option>
+      </select>
+      <p class="small text-muted" *ngIf="seleccionado && !seleccionado.bodega">
+        Este despachador no tiene bodega. Configúrela en Asignación de bodega.
+      </p>
+      <p class="small text-muted" *ngIf="!despachadores.length">
+        No hay usuarios con perfil Despachador.
+      </p>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary" (click)="aceptar()" [disabled]="!despachadorId || guardando">
+          Aceptar
+        </button>
+        <a routerLink="/configuracion/despacho/cargues" class="btn btn-outline-secondary">Volver</a>
+      </div>
+    </div>
+  </div>
+</div>

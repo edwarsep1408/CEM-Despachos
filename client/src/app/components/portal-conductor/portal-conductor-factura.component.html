@@ -1,0 +1,233 @@
+<div class="ruta">
+  <header class="ruta-top">
+    <button type="button" class="ruta-salir" (click)="volver()">Volver</button>
+  </header>
+
+  <p class="ruta-estado" *ngIf="cargando">Cargando factura…</p>
+  <p class="ruta-estado ruta-error" *ngIf="!cargando && error">{{ error }}</p>
+
+  <ng-container *ngIf="!cargando && data">
+    <p class="doc-marca">Cárnicos y Alimentos SAS · Pollocoa</p>
+    <h1>Documento de novedades en ruta</h1>
+    <p class="doc-nro">No. {{ nroNovedad }}</p>
+
+    <dl class="doc-cab">
+      <div><dt>Cliente</dt><dd>{{ data.stop?.cliente || "—" }}</dd></div>
+      <div><dt>NIT</dt><dd>{{ data.stop?.nit || "—" }}</dd></div>
+      <div><dt>Punto de contacto</dt><dd>{{ data.stop?.sucursal || "—" }}</dd></div>
+      <div>
+        <dt>Auxiliar</dt>
+        <dd>
+          <input class="form-control form-control-sm" [(ngModel)]="auxiliar" placeholder="Nombre del auxiliar" />
+        </dd>
+      </div>
+      <div><dt>Placa</dt><dd>{{ data.hoja?.placa || "—" }}</dd></div>
+      <div><dt>Factura</dt><dd>{{ data.stop?.nroFactura || "—" }}</dd></div>
+    </dl>
+
+    <div class="ruta-alcance">
+      <button type="button" [class.is-on]="tipoPago === 'CONTADO'" (click)="tipoPago = 'CONTADO'">Contado</button>
+      <button type="button" [class.is-on]="tipoPago === 'CREDITO'" (click)="tipoPago = 'CREDITO'">Crédito</button>
+    </div>
+
+    <label class="ruta-label">
+      Nota crédito asociada
+      <input class="form-control" [(ngModel)]="notaCredito" placeholder="Opcional" />
+    </label>
+
+    <div class="ruta-alcance">
+      <button type="button" [class.is-on]="entregaCompleta" (click)="marcarCompleta()">Entrega completa</button>
+      <button type="button" [class.is-on]="!entregaCompleta" (click)="marcarNovedad()">Hay novedad</button>
+    </div>
+
+    <ng-container *ngIf="!entregaCompleta">
+      <label class="ruta-label">
+        Motivo
+        <select class="form-select" [(ngModel)]="motivo">
+          <option value="" disabled>Seleccione el código</option>
+          <optgroup *ngFor="let g of gruposMotivo" [label]="g.nombre">
+            <option *ngFor="let m of g.items" [value]="m.codigo">
+              {{ m.nro && m.nro < 41 ? m.nro + '. ' : '' }}{{ m.nombre }}
+            </option>
+          </optgroup>
+        </select>
+      </label>
+
+      <p class="ruta-estado" *ngIf="!lineas.length">Esta factura no tiene ítems en el sistema. Puede registrar el motivo y las firmas.</p>
+
+      <div class="ruta-item" *ngFor="let linea of lineas">
+        <strong>{{ linea.referencia }}</strong>
+        <p>{{ linea.concepto }}</p>
+        <p class="ruta-meta">
+          Facturado:
+          <span *ngIf="linea.unidades">{{ linea.unidades }} und</span>
+          <span *ngIf="linea.kilos"> {{ linea.kilos | number: "1.1-2" }} kg</span>
+        </p>
+
+        <div class="doc-grid">
+          <label>Dev. und
+            <input type="number" class="form-control" min="0" step="1" [(ngModel)]="linea.unidadesDevolucion" (ngModelChange)="recalcularValor(linea)" />
+          </label>
+          <label>Dev. kg
+            <input type="number" class="form-control" min="0" step="0.01" [(ngModel)]="linea.kilosDevolucion" (ngModelChange)="recalcularValor(linea)" />
+          </label>
+          <label>Merma %
+            <input type="number" class="form-control" min="0" step="0.01" [(ngModel)]="linea.mermaPct" (ngModelChange)="cambiarMermaPct(linea)" />
+          </label>
+          <label>Merma kg
+            <input type="number" class="form-control" min="0" step="0.01" [(ngModel)]="linea.kilosMerma" (ngModelChange)="cambiarMermaKg(linea)" />
+          </label>
+          <label>Falt. und
+            <input type="number" class="form-control" min="0" step="1" [(ngModel)]="linea.unidadesFaltante" (ngModelChange)="recalcularValor(linea)" />
+          </label>
+          <label>Falt. kg
+            <input type="number" class="form-control" min="0" step="0.01" [(ngModel)]="linea.kilosFaltante" (ngModelChange)="recalcularValor(linea)" />
+          </label>
+        </div>
+        <label class="ruta-label">
+          Valor novedad
+          <input type="number" class="form-control" min="0" step="1" [(ngModel)]="linea.valorNovedad" />
+        </label>
+      </div>
+
+      <p class="doc-total" *ngIf="totalNovedad">Total novedad {{ totalNovedad | number: "1.0-0" }}</p>
+
+      <label class="ruta-label">
+        Observación
+        <textarea class="form-control" rows="3" [(ngModel)]="observacion" placeholder="Opcional"></textarea>
+      </label>
+
+      <app-firma-pad #padCliente titulo="Firma cliente" [imagen]="firmaCliente"></app-firma-pad>
+      <app-firma-pad #padTransporte titulo="Firma transporte" [imagen]="firmaTransporte"></app-firma-pad>
+      <app-firma-pad #padEmpresa titulo="Firma empresa (opcional)" [imagen]="firmaEmpresa"></app-firma-pad>
+    </ng-container>
+
+    <section class="ruta-recaudo">
+      <h2>Recaudo</h2>
+      <dl class="recaudo-cruce">
+        <div>
+          <dt>Factura</dt>
+          <dd>{{ pesos(evaluacion.factura) }}</dd>
+        </div>
+        <div *ngIf="evaluacion.novedad">
+          <dt>Novedad</dt>
+          <dd>{{ pesos(evaluacion.novedad) }}</dd>
+        </div>
+        <div>
+          <dt>A recaudar</dt>
+          <dd>{{ pesos(evaluacion.esperado) }}</dd>
+        </div>
+        <div>
+          <dt>Según comprobantes</dt>
+          <dd>{{ pesos(evaluacion.totalRecaudado) }}</dd>
+        </div>
+      </dl>
+      <p class="recaudo-eval" [attr.data-estado]="evaluacion.estado">{{ etiquetaRecaudo(evaluacion.estado) }}</p>
+
+      <div class="ruta-item" *ngFor="let rec of recaudos; let i = index">
+        <div class="ruta-card-head">
+          <strong>{{ rec.tipoEtiqueta || "Comprobante" }} {{ i + 1 }}</strong>
+          <button type="button" class="ruta-salir" (click)="quitarRecaudo(i)">Quitar</button>
+        </div>
+        <p class="recaudo-monto" *ngIf="rec.monto">
+          Según este comprobante {{ pesos(rec.monto) }}
+        </p>
+        <p class="ruta-estado" *ngIf="rec.leyendo">Leyendo el comprobante…</p>
+        <p class="ruta-estado ruta-error" *ngIf="rec.errorOcr">{{ rec.errorOcr }}</p>
+        <img *ngIf="rec.foto" class="recaudo-foto" [src]="rec.foto" alt="Comprobante" />
+        <label class="ruta-label">
+          {{ rec.foto ? "Tomar otra foto" : "Foto del comprobante" }}
+          <input type="file" accept="image/*" capture="environment" (change)="onFoto($event, rec)" />
+        </label>
+        <div class="doc-grid" *ngIf="rec.foto && !rec.leyendo">
+          <label>Monto leído
+            <input type="number" class="form-control" min="0" step="1" [(ngModel)]="rec.monto" />
+          </label>
+          <label>Fecha
+            <input type="datetime-local" class="form-control" [(ngModel)]="rec.fecha" />
+          </label>
+          <label>Referencia
+            <input class="form-control" [(ngModel)]="rec.referencia" />
+          </label>
+          <label>N° transacción / recibo
+            <input class="form-control" [(ngModel)]="rec.recibo" />
+          </label>
+          <label>Cuenta origen
+            <input class="form-control" [(ngModel)]="rec.cuentaOrigen" placeholder="015-000065-07" />
+          </label>
+          <label>Cuenta destino
+            <input class="form-control" [(ngModel)]="rec.cuentaDestino" placeholder="006-477957-65" />
+          </label>
+        </div>
+        <button type="button" class="ruta-salir" *ngIf="rec.foto && !rec.leyendo" (click)="rec.extra = !rec.extra">
+          {{ rec.extra ? "Ocultar datos del ticket" : "Más datos del ticket" }}
+        </button>
+        <div class="doc-grid" *ngIf="rec.extra">
+          <label>Banco
+            <input class="form-control" [(ngModel)]="rec.banco" />
+          </label>
+          <label>Forma de pago
+            <input class="form-control" [(ngModel)]="rec.formaPago" />
+          </label>
+          <label>Aprobación
+            <input class="form-control" [(ngModel)]="rec.aprobacion" />
+          </label>
+          <label>RRN
+            <input class="form-control" [(ngModel)]="rec.rrn" />
+          </label>
+          <label>Caja
+            <input class="form-control" [(ngModel)]="rec.caja" />
+          </label>
+          <label>Convenio
+            <input class="form-control" [(ngModel)]="rec.convenio" />
+          </label>
+          <label>Código convenio
+            <input class="form-control" [(ngModel)]="rec.codigoConvenio" />
+          </label>
+          <label>Referencia 2
+            <input class="form-control" [(ngModel)]="rec.referencia2" />
+          </label>
+          <label>Lugar / oficina
+            <input class="form-control" [(ngModel)]="rec.lugar" />
+          </label>
+          <label>Oficina
+            <input class="form-control" [(ngModel)]="rec.oficina" />
+          </label>
+          <label>Terminal
+            <input class="form-control" [(ngModel)]="rec.terminal" />
+          </label>
+          <label>Usuario banco
+            <input class="form-control" [(ngModel)]="rec.usuarioBanco" />
+          </label>
+          <label>C. único
+            <input class="form-control" [(ngModel)]="rec.codigoUnico" />
+          </label>
+          <label>Pagador
+            <input class="form-control" [(ngModel)]="rec.pagador" />
+          </label>
+          <label>NIT / ID pagador
+            <input class="form-control" [(ngModel)]="rec.nitPagador" />
+          </label>
+          <label>Tipo ID
+            <input class="form-control" [(ngModel)]="rec.tipoId" />
+          </label>
+          <label>Número ID
+            <input class="form-control" [(ngModel)]="rec.numeroId" />
+          </label>
+          <label>Placa en el ticket
+            <input class="form-control text-uppercase" [(ngModel)]="rec.placaTicket" />
+          </label>
+        </div>
+      </div>
+
+      <label class="ruta-foto-btn">
+        {{ recaudos.length ? "Agregar otra foto" : "Tomar foto del comprobante" }}
+        <input type="file" accept="image/*" capture="environment" (change)="onFotoNueva($event)" />
+      </label>
+    </section>
+
+    <button type="button" class="login-submit ruta-guardar" (click)="guardar()" [disabled]="guardando">
+      {{ guardando ? "Guardando…" : (entregaCompleta ? "Confirmar entrega" : "Guardar novedad") }}
+    </button>
+  </ng-container>
+</div>

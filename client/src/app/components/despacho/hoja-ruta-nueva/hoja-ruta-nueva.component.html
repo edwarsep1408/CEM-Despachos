@@ -1,0 +1,76 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bx-map-alt page-banner-icon"></i>
+    <div>
+      <h1>Nueva hoja de ruta</h1>
+      <p>Se crea como temporal. Elija auxiliar de calidad y supervisor de logística; su sello guardado sale en el certificado.</p>
+    </div>
+  </div>
+</div>
+
+<div class="despacho-modulo">
+  <form class="hoja-form" (submit)="$event.preventDefault(); aceptar()">
+    <div class="hoja-form-row">
+      <label for="hojaVehiculo">VEHICULO</label>
+      <select id="hojaVehiculo" class="form-select" [(ngModel)]="placa" name="placa" required>
+        <option value=""></option>
+        <option *ngFor="let item of vehiculos" [value]="item.placa">{{ etiquetaVehiculo(item) }}</option>
+      </select>
+    </div>
+    <p class="small text-muted" style="margin-left:176px" *ngIf="vehiculoSel">
+      Capacidad: {{ vehiculoSel.capacidad || 0 }} t ({{ (vehiculoSel.capacidad || 0) * 1000 | number : "1.0-0" }} kg). El uso se calcula con el peso de las facturas.
+    </p>
+    <div class="hoja-form-row">
+      <label for="hojaFecha">FECHA</label>
+      <input id="hojaFecha" type="date" class="form-control" [(ngModel)]="fecha" name="fecha" required />
+    </div>
+    <div class="hoja-form-row">
+      <label for="hojaNombre">NOMBRE</label>
+      <input id="hojaNombre" type="text" class="form-control" [(ngModel)]="nombre" name="nombre" autocomplete="off" />
+    </div>
+    <div class="hoja-form-row">
+      <label for="hojaPesoAdicional">PESO ADICIONAL</label>
+      <input
+        id="hojaPesoAdicional"
+        type="number"
+        class="form-control"
+        [(ngModel)]="pesoAdicional"
+        name="pesoAdicional"
+        step="0.1"
+        min="0"
+      />
+    </div>
+    <div class="hoja-form-row">
+      <label for="hojaTemperatura">TEMPERATURA</label>
+      <input
+        id="hojaTemperatura"
+        type="text"
+        class="form-control"
+        [(ngModel)]="temperatura"
+        name="temperatura"
+        autocomplete="off"
+      />
+    </div>
+    <div class="hoja-form-row">
+      <label for="hojaFirmanteCalidad">AUX. CALIDAD</label>
+      <select id="hojaFirmanteCalidad" class="form-select" [(ngModel)]="firmanteCalidadId" name="firmanteCalidadId">
+        <option value=""></option>
+        <option *ngFor="let item of firmantesCalidad" [value]="item._id">{{ item.nombre }}</option>
+      </select>
+    </div>
+    <div class="hoja-form-row">
+      <label for="hojaFirmanteLogistica">SUP. LOGÍSTICA</label>
+      <select id="hojaFirmanteLogistica" class="form-select" [(ngModel)]="firmanteLogisticaId" name="firmanteLogisticaId">
+        <option value=""></option>
+        <option *ngFor="let item of firmantesLogistica" [value]="item._id">{{ item.nombre }}</option>
+      </select>
+    </div>
+    <p class="small text-muted" style="margin-left:176px" *ngIf="!firmantesCalidad.length && !firmantesLogistica.length">
+      Habilite la firma en Usuarios (trazan una vez en /mi-firma) o registre un sello en Configuración → Firmantes.
+    </p>
+    <div class="hoja-form-acciones">
+      <button type="submit" class="btn btn-secondary" [disabled]="!placa || !nombre.trim() || guardando">Aceptar</button>
+      <a routerLink="/configuracion/despacho/hojas-de-ruta" class="btn btn-secondary">cancelar</a>
+    </div>
+  </form>
+</div>

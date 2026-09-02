@@ -1,0 +1,5 @@
+<div class="piso" *ngIf="!listo">
+  <app-piso-brand></app-piso-brand>
+  <p class="vacio">{{ mensaje }}</p>
+</div>
+<router-outlet *ngIf="listo"></router-outlet>

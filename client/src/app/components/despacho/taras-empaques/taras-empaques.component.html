@@ -1,0 +1,239 @@
+<div class="content-title">
+  <div class="col-mb-6">
+    <h3>Taras o empaques</h3>
+    <p class="text-muted small mb-0">
+      Peso de bases, carretas, canastas y cajas para restar del kg bruto al despachar.
+    </p>
+  </div>
+  <div class="col-mb-6 d-grid gap-2 d-md-flex justify-content-md-end">
+    <div class="input-group input-search">
+      <span class="input-group-text search-icon" id="basic-addon-taras">
+        <i class="ri-search-line"></i>
+      </span>
+      <input
+        type="text"
+        class="form-control search-input"
+        (keyup)="applyFilter($event)"
+        placeholder="Buscar"
+        aria-label="Buscar"
+        name="buscar"
+        aria-describedby="basic-addon-taras"
+      />
+    </div>
+    <button
+      type="button"
+      class="btn btn-primary"
+      data-bs-toggle="offcanvas"
+      data-bs-target="#offcanvasTara"
+      aria-controls="offcanvasTara"
+    >
+      <i class="ri-add-circle-fill"></i> Nueva tara
+    </button>
+  </div>
+</div>
+
+<div class="mat-elevation-z4">
+  <table mat-table [dataSource]="dataSource" matSort>
+    <ng-container matColumnDef="idTara">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>ID</th>
+      <td mat-cell *matCellDef="let element">{{ element.idTara }}</td>
+    </ng-container>
+    <ng-container matColumnDef="nombre">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>NOMBRE</th>
+      <td mat-cell *matCellDef="let element">
+        <div class="content-ilustration">
+          <div class="ilustration"><i class="bx bx-box"></i></div>
+          {{ element.nombre }}
+        </div>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="unidad">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>UNIDAD</th>
+      <td mat-cell *matCellDef="let element">{{ element.unidad }}</td>
+    </ng-container>
+    <ng-container matColumnDef="activo">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>ACTIVO</th>
+      <td mat-cell *matCellDef="let element">
+        <span class="badge" [class.text-bg-success]="element.activo !== false" [class.text-bg-secondary]="element.activo === false">
+          {{ element.activo === false ? "INACTIVO" : "ACTIVO" }}
+        </span>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="peso">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>PESO</th>
+      <td mat-cell *matCellDef="let element">{{ (element.peso ?? element.pesoKg) | number : "1.1-2" }}</td>
+    </ng-container>
+    <ng-container matColumnDef="empaque">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>EMPAQUE</th>
+      <td mat-cell *matCellDef="let element">{{ element.empaque || "N/A" }}</td>
+    </ng-container>
+    <ng-container matColumnDef="esCaja">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>CAJA</th>
+      <td mat-cell *matCellDef="let element">{{ element.esCaja ? "SI" : "NO" }}</td>
+    </ng-container>
+    <ng-container matColumnDef="acciones">
+      <th mat-header-cell *matHeaderCellDef>ACCIONES</th>
+      <td mat-cell *matCellDef="let element">
+        <button
+          class="btn btn-edit"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#offcanvasTaraEdit"
+          aria-controls="offcanvasTaraEdit"
+          (click)="onClickDato(element)"
+        >
+          <i class="bi bi-pencil-square"></i>
+        </button>
+        <button class="btn btn-delete" (click)="onDelete(element._id)">
+          <i class="bi bi-trash3-fill"></i>
+        </button>
+      </td>
+    </ng-container>
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+  <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons></mat-paginator>
+</div>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasTara" aria-labelledby="offcanvasTaraLabel">
+  <form (submit)="onSubmit()" #AddForm="ngForm">
+    <div class="offcanvas-header">
+      <h6 class="offcanvas-title" id="offcanvasTaraLabel">Nueva tara</h6>
+    </div>
+    <div class="offcanvas-body">
+      <div class="form-floating mb-3">
+        <input
+          type="text"
+          class="form-control"
+          [(ngModel)]="addForm.nombre"
+          name="nombre"
+          #nombre="ngModel"
+          [ngClass]="{ 'is-invalid': nombre.invalid && (nombre.dirty || nombre.touched) }"
+          id="taraNombre"
+          placeholder="Nombre"
+          autocomplete="off"
+          required
+        />
+        <label for="taraNombre">Nombre</label>
+      </div>
+      <div class="form-floating mb-3">
+        <select
+          class="form-select"
+          id="taraUnidad"
+          [(ngModel)]="addForm.unidad"
+          name="unidad"
+          required
+        >
+          <option *ngFor="let item of unidades" [value]="item">{{ item }}</option>
+        </select>
+        <label for="taraUnidad">Unidad</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input
+          type="number"
+          class="form-control"
+          [(ngModel)]="addForm.peso"
+          name="peso"
+          #peso="ngModel"
+          [ngClass]="{ 'is-invalid': peso.invalid && (peso.dirty || peso.touched) }"
+          id="taraPeso"
+          placeholder="Peso"
+          min="0"
+          max="1000"
+          step="0.1"
+          required
+        />
+        <label for="taraPeso">Peso</label>
+      </div>
+      <div class="form-floating mb-3">
+        <select class="form-select" id="taraEmpaque" [(ngModel)]="addForm.empaque" name="empaque" required>
+          <option *ngFor="let item of empaques" [value]="item">{{ item }}</option>
+        </select>
+        <label for="taraEmpaque">Empaque</label>
+      </div>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="taraEsCaja" [(ngModel)]="addForm.esCaja" name="esCaja" />
+        <label class="form-check-label" for="taraEsCaja">Es caja</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="taraActivo" [(ngModel)]="addForm.activo" name="activo" />
+        <label class="form-check-label" for="taraActivo">Activo</label>
+      </div>
+    </div>
+    <div class="offcanvas-footer">
+      <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="AddForm.pristine || AddForm.invalid">Guardar</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasTaraEdit" aria-labelledby="offcanvasTaraEditLabel">
+  <form (submit)="onUpdate()" #EditForm="ngForm">
+    <div class="offcanvas-header">
+      <h6 class="offcanvas-title" id="offcanvasTaraEditLabel">Editar tara</h6>
+    </div>
+    <div class="offcanvas-body">
+      <div class="form-floating mb-3">
+        <input
+          type="text"
+          class="form-control"
+          [(ngModel)]="editForm.nombre"
+          name="nombre"
+          #editNombre="ngModel"
+          [ngClass]="{ 'is-invalid': editNombre.invalid && (editNombre.dirty || editNombre.touched) }"
+          id="taraEditNombre"
+          placeholder="Nombre"
+          autocomplete="off"
+          required
+        />
+        <label for="taraEditNombre">Nombre</label>
+      </div>
+      <div class="form-floating mb-3">
+        <select class="form-select" id="taraEditUnidad" [(ngModel)]="editForm.unidad" name="unidad" required>
+          <option *ngFor="let item of unidades" [value]="item">{{ item }}</option>
+        </select>
+        <label for="taraEditUnidad">Unidad</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input
+          type="number"
+          class="form-control"
+          [(ngModel)]="editForm.peso"
+          name="peso"
+          #editPeso="ngModel"
+          [ngClass]="{ 'is-invalid': editPeso.invalid && (editPeso.dirty || editPeso.touched) }"
+          id="taraEditPeso"
+          placeholder="Peso"
+          min="0"
+          max="1000"
+          step="0.1"
+          required
+        />
+        <label for="taraEditPeso">Peso</label>
+      </div>
+      <div class="form-floating mb-3">
+        <select class="form-select" id="taraEditEmpaque" [(ngModel)]="editForm.empaque" name="empaque" required>
+          <option *ngFor="let item of empaques" [value]="item">{{ item }}</option>
+        </select>
+        <label for="taraEditEmpaque">Empaque</label>
+      </div>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="taraEditEsCaja" [(ngModel)]="editForm.esCaja" name="esCaja" />
+        <label class="form-check-label" for="taraEditEsCaja">Es caja</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="taraEditActivo" [(ngModel)]="editForm.activo" name="activo" />
+        <label class="form-check-label" for="taraEditActivo">Activo</label>
+      </div>
+    </div>
+    <div class="offcanvas-footer">
+      <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas" data-bs-dismiss-edit="true">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="EditForm.invalid">Guardar</button>
+      </div>
+    </div>
+  </form>
+</div>

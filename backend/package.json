@@ -4,9 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/index.js --exec babel-node",
+    "dev": "PORT=3020 nodemon src/index.js --exec babel-node",
     "build": "babel src -d dist",
-    "start": "nodemon src/index.js --exec babel-node"
+    "start": "PORT=3020 nodemon src/index.js --exec babel-node",
+    "etl:pedidos": "babel-node src/etl/runPedidosSiesa.js",
+    "etl:vidas-utiles": "babel-node src/etl/aplicarVidasUtiles.js",
+    "etl:empaques": "babel-node src/etl/aplicarVidasUtiles.js"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +19,7 @@
     "consola": "^3.2.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
@@ -28,6 +32,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.7",
     "socket.io": "^4.7.3",
+    "tesseract.js": "^5.1.1",
     "uuid": "^9.0.1",
     "xlsx": "^0.18.5",
     "xml2js": "^0.6.2"

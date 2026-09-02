@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, OnDestroy } from '@angular/core';
 import { BodegasService } from '../../services/bodegas/bodegas.service';
 import { MaterialModule } from '../../material.module';
 import { CommonModule, DecimalPipe } from '@angular/common';
@@ -21,7 +21,7 @@ import Swal from 'sweetalert2';
   templateUrl: './inventario-total-compania.component.html',
   styleUrl: './inventario-total-compania.component.css',
 })
-export class InventarioTotalCompaniaComponent {
+export class InventarioTotalCompaniaComponent implements OnDestroy {
 
   labelsLinea: any;
   valuesLinea: any;
@@ -39,6 +39,8 @@ export class InventarioTotalCompaniaComponent {
   totalUnidades = 0;
   totalKgMovimento = 0;
   totalUnidadesMovimiento = 0;
+  transitoCargando = false;
+  private transitoIntentos = 0;
   token: string = ''
   detallesLineaSeleccionada: any = [];
   statusSession: boolean = false
@@ -49,6 +51,7 @@ export class InventarioTotalCompaniaComponent {
   @ViewChild('sortLinea') sortLinea!: MatSort;
   dataSource = new MatTableDataSource<any>();
   dataSourceLinea = new MatTableDataSource([]);
+  private transitoTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private _bodegasService: BodegasService, private _router: Router, private _route: ActivatedRoute, private sessionService: SesionService) {
 
@@ -67,42 +70,49 @@ export class InventarioTotalCompaniaComponent {
 
   consultarInventarioCompania() {
 
-    this._bodegasService.consultarInventarioTotalCompania().subscribe((response) => {
+    this._bodegasService.consultarInventarioTotalCompania().subscribe({
+      next: (response) => {
+        if (response.body) {
+          this.labelsLinea = response.body.labelsLinea;
+          this.valuesLinea = response.body.valuesLinea;
+          this.bodegasDisponibles = response.body.bodegasDisponibles || [];
+          this.columnasDatatable = ['referencia', 'descripcion', 'rotacion', 'totalCompaniaPeso', 'totalCompaniaUnidades', 'promedioGeneral', ...this.bodegasDisponibles.map((bodega: any) => bodega.desc_bodega)]
+          this.dataSource.data = response.body.informacionAgrupadaFront || [];
+          const primeraAsigacion = (response.body.detallesLineaFront || []).map((val: any) => ({
+            ...val,
+            detalle: false
+          }));
+          this.dataSourceLinea.data = primeraAsigacion;
+          this.insumosenTransito = response.body.documentosEnTrasporte;
+          this.labelsCombinacionCriterios = response.body.labelCombCriterios;
+          this.kgCombinacionCriterios = response.body.kgCombCriterios
+          this.unidadesCombinacionCriterios = response.body.unidadesCombCriterios;
+          this.totalKgs = response.body.totales.totalKgCompania;
+          this.totalUnidades = response.body.totales.totalUnidadesCompania;
+          this.aplicarTransito(response.body);
 
-      if (response.body) {
-        this.labelsLinea = response.body.labelsLinea;
-        this.valuesLinea = response.body.valuesLinea;
-        this.bodegasDisponibles = response.body.bodegasDisponibles;
-        this.columnasDatatable = ['referencia', 'descripcion', 'rotacion', 'totalCompaniaPeso', 'totalCompaniaUnidades', 'promedioGeneral', ...this.bodegasDisponibles.map((bodega: any) => bodega.desc_bodega)]
-        this.dataSource.data = response.body.informacionAgrupadaFront;
-        const primeraAsigacion = response.body.detallesLineaFront.map((val: any) => ({
-          ...val,
-          detalle: false
-        }));
-        console.log(response.body);
-        this.dataSourceLinea.data = primeraAsigacion;
-        this.insumosenTransito = response.body.documentosEnTrasporte;
-        this.labelsCombinacionCriterios = response.body.labelCombCriterios;
-        this.kgCombinacionCriterios = response.body.kgCombCriterios
-        this.unidadesCombinacionCriterios = response.body.unidadesCombCriterios;
-        this.totalKgs = response.body.totales.totalKgCompania;
-        this.totalUnidades = response.body.totales.totalUnidadesCompania;
-        this.totalKgMovimento = response.body.totales.totalKgMovimiento;
-        this.totalUnidadesMovimiento = response.body.totales.totalUnidadesMovimiento;
-
-        setTimeout(() => {
-          /* Inicializar estos valores al final de tener todo renderizado para que aplique los valores */
-          this.dataSource.sort = this.sort;
-          this.dataSource.paginator = this.paginator;
-          this.dataSourceLinea.paginator = this.paginatorLinea;
-          this.dataSourceLinea.sort = this.sortLinea;
-          this.onCreateChart();
-          this.onCreateChartCombinacioncriterios();
-        }, 0);
-
+          setTimeout(() => {
+            this.dataSource.sort = this.sort;
+            this.dataSource.paginator = this.paginator;
+            this.dataSourceLinea.paginator = this.paginatorLinea;
+            this.dataSourceLinea.sort = this.sortLinea;
+            this.onCreateChart();
+            this.onCreateChartCombinacioncriterios();
+          }, 0);
+        }
         this.cargando = false;
-
-      }
+      },
+      error: (error) => {
+        console.error(error);
+        this.cargando = false;
+        Swal.fire({
+          title: 'No se pudo consultar el inventario',
+          text:
+            error?.error?.body?.message ||
+            'SIESA Connekta no respondió el inventario de la compañía.',
+          icon: 'error',
+        });
+      },
     });
   }
 
@@ -110,6 +120,52 @@ export class InventarioTotalCompaniaComponent {
 
     setTimeout(() => this.reloadPage(), 200000)
 
+  }
+
+  ngOnDestroy(): void {
+    if (this.transitoTimer) {
+      clearTimeout(this.transitoTimer);
+      this.transitoTimer = null;
+    }
+  }
+
+  private aplicarTransito(body: any): void {
+    const totales = body?.totales || {};
+    if (totales.totalKgMovimiento != null) {
+      this.totalKgMovimento = totales.totalKgMovimiento;
+    }
+    if (totales.totalUnidadesMovimiento != null) {
+      this.totalUnidadesMovimiento = totales.totalUnidadesMovimiento;
+    }
+    if (Array.isArray(body?.documentosEnTrasporte)) {
+      this.insumosenTransito = body.documentosEnTrasporte;
+    }
+    const transito = body?.transito || {};
+    const sinDatos = !this.totalKgMovimento && !this.totalUnidadesMovimiento;
+    this.transitoCargando = Boolean(transito.enCurso) && sinDatos;
+    if (transito.enCurso) {
+      this.programarRefrescoTransito();
+    } else if (!transito.listo && sinDatos && this.transitoIntentos < 20) {
+      this.programarRefrescoTransito();
+    }
+  }
+
+  private programarRefrescoTransito(): void {
+    if (this.transitoTimer) clearTimeout(this.transitoTimer);
+    this.transitoIntentos += 1;
+    this.transitoTimer = setTimeout(() => this.consultarTransito(), 8000);
+  }
+
+  private consultarTransito(): void {
+    this._bodegasService.consultarInventarioTransito().subscribe({
+      next: (response) => {
+        if (response.body) this.aplicarTransito(response.body);
+      },
+      error: (error) => {
+        console.error(error);
+        this.transitoCargando = false;
+      },
+    });
   }
 
   onCreateChart() {

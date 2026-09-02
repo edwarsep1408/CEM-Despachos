@@ -5,7 +5,8 @@ import { parseString } from "xml2js";
 import path from "path";
 import { readFileSync } from "fs";
 import xlsx from "xlsx";
-import { log } from "console";
+import { aplicarVidasUtilesAItems, etiquetaVidaUtil } from "../services/vidaUtil.servicios";
+import { aplicarEmpaquesAItems, frioDeSiesa } from "../services/empaqueItems.servicios";
 
 const itemsCtr = {};
 
@@ -222,6 +223,15 @@ itemsCtr.sincronizacionItemsExcel = async (req, res) => {
 
 itemsCtr.getItems = async (req, res) => {
   try {
+    const conVida = await itemsModel.countDocuments({
+      $or: [{ vidaUtilMeses: { $gt: 0 } }, { vidaUtilDias: { $gt: 0 } }],
+    });
+    if (conVida === 0) await aplicarVidasUtilesAItems();
+    const conEmpaque = await itemsModel.countDocuments({
+      $or: [{ unidadesEmpaque: { $gt: 0 } }, { taraNombre: { $nin: [null, ""] } }],
+    });
+    if (conEmpaque === 0) await aplicarEmpaquesAItems();
+
     const items = await itemsModel.find();
 
     if (items.length === 0) {
@@ -297,18 +307,26 @@ itemsCtr.SincronizarReferenciasUnoee = async (req, res) => {
     let registrosActualizados = 0;
     let referenciasActualizadas = [];
 
-    const response = await axios.get('https://servicios.siesacloud.com/api/connekta/v3.1/ejecutarconsulta?idCompania=55&descripcion=carnicosyalimentos_GET_ITEMS&paginacion=numPag=1|tamPag=100', {
-      headers: {
-
-        "Content-Type": "application/json",
-        "ConniKey": "aa74be9840e91d6dbba9728b0e61a68e",
-        "ConniToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjZjZTU1N2JmLWRmYjMtNDM3ZC1hMDEyLTQ3YzEyZjE3Zjc4MyIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcHJpbWFyeXNpZCI6ImNkOWNlY2JhLTJhOWEtNDdhZC1hODkyLWJkZjE0MTAyYmUxYiJ9.fV7jAmDIz5JqaLGqIbhSGC3zKzkh2Lok4t6yBK5WIxc",
-
+    const itemsTimeout = Number(process.env.SIESA_ITEMS_TIMEOUT_MS || 120000);
+    const tamPag = Number(process.env.SIESA_ITEMS_PAGE_SIZE || 500);
+    const itemsHeaders = {
+      "Content-Type": "application/json",
+      ConniKey: process.env.SIESA_CONNI_KEY || "",
+      ConniToken: process.env.SIESA_CONNI_TOKEN || "",
+    };
+    const itemsBase = `${process.env.SIESA_BASE_URL || "https://servicios.siesacloud.com/api/connekta/v3.1/ejecutarconsulta"}?idCompania=${process.env.SIESA_ID_COMPANIA || "55"}&descripcion=${process.env.SIESA_CONSULTA_ITEMS || "carnicosyalimentos_GET_ITEMS"}`;
+    const items = [];
+    for (let numPag = 1; numPag <= 50; numPag += 1) {
+      const response = await axios.get(
+        `${itemsBase}&paginacion=${encodeURIComponent(`numPag=${numPag}|tamPag=${tamPag}`)}`,
+        { headers: itemsHeaders, timeout: itemsTimeout }
+      );
+      const page = response.data?.detalle?.Table || [];
+      items.push(...page);
+      if (!page.length || page.length < tamPag || page.length > tamPag) {
+        break;
       }
-    });
-
-
-    const items = response.data?.detalle?.Table || [];
+    }
 
     if (items.length === 0) {
 
@@ -324,10 +342,16 @@ itemsCtr.SincronizarReferenciasUnoee = async (req, res) => {
 
     for (const element of items) {
 
-      const existeItem = await itemsModel.findOne({ referencia: element.id_item, codigoItem: element.codigo_item, referencia: element.referencia.trim() }).lean();
+      const existeItem = await itemsModel.findOne({
+        $or: [
+          { codigoItem: String(element.codigo_item || "").trim() },
+          { referencia: String(element.referencia || "").trim() },
+        ],
+      }).lean();
 
 
       let estadoItemLocal = existeItem ? Number(existeItem.estado) : 0;
+      const estadoFrio = frioDeSiesa(element);
 
       /* validar si el item no existe lo crea, pero si el ITEM existe y no tiene el mismo estado de sistema 1 lo actualiza  */
       if (!existeItem) {
@@ -347,6 +371,7 @@ itemsCtr.SincronizarReferenciasUnoee = async (req, res) => {
           linea: '',
           estado: element.estado,
           combinacion: '',
+          estadoFrio,
 
         });
         const guardarItem = await nuevoItem.save();
@@ -354,23 +379,33 @@ itemsCtr.SincronizarReferenciasUnoee = async (req, res) => {
           nuevosRegistros += 1;
         }
 
-      } else if (estadoItemLocal !== element.estado) {
-
-        /* Si el estado es diferente, se actualiza en el sistema el item */
-
-        const actualizarItem = await itemsModel.findByIdAndUpdate(existeItem._id, { estado: element.estado }, { new: true });
-        referenciasActualizadas.push(actualizarItem.referencia);
-        if (actualizarItem._id) {
-          registrosActualizados += 1;
+      } else {
+        const patch = {};
+        if (estadoItemLocal !== element.estado) patch.estado = element.estado;
+        if (estadoFrio && estadoFrio !== String(existeItem.estadoFrio || "").trim().toUpperCase()) {
+          patch.estadoFrio = estadoFrio;
         }
-
+        if (Object.keys(patch).length) {
+          const actualizarItem = await itemsModel.findByIdAndUpdate(
+            existeItem._id,
+            { ...patch, fecha_actualizacion: new Date() },
+            { new: true }
+          );
+          referenciasActualizadas.push(actualizarItem.referencia);
+          if (actualizarItem._id) {
+            registrosActualizados += 1;
+          }
+        }
       }
     }
+
+    const vidas = await aplicarVidasUtilesAItems();
+    const empaques = await aplicarEmpaquesAItems();
 
     const nuevaSincronizacion = new sincronizacionesModel({
 
       nombre_sincronizacion: 'items',
-      descripcion_sincronizacion: `Sincronización de referencias unoee, completada con éxito `,
+      descripcion_sincronizacion: `Sincronización de referencias unoee. Vida útil y empaque local no se sobreescriben.`,
       estado_sincronizacion: 'Finalizado',
       usuario_iniciador: req.query.usuario,
       total_items_nuevos: nuevosRegistros,
@@ -388,7 +423,12 @@ itemsCtr.SincronizarReferenciasUnoee = async (req, res) => {
       return res.status(200).json({
 
         status: 200,
-        body: { message: "Sincronización de datos exitosa.", total_nuevos_registros: nuevosRegistros, registros_actualizados: registrosActualizados },
+        body: {
+          message: "Sincronización de datos exitosa.",
+          total_nuevos_registros: nuevosRegistros,
+          registros_actualizados: registrosActualizados,
+          vidaUtil: vidas,
+        },
         error: false,
 
       });
@@ -397,10 +437,71 @@ itemsCtr.SincronizarReferenciasUnoee = async (req, res) => {
 
   } catch (error) {
     console.error("Error en la sincronización de datos:", error);
-
+    if (!res.headersSent) {
+      return res.status(502).json({
+        status: 502,
+        body: {
+          message:
+            error.response?.data?.detalle ||
+            error.response?.data?.mensaje ||
+            error.message ||
+            "No se pudieron sincronizar los ítems con SIESA.",
+        },
+        error: true,
+      });
+    }
   }
 
 }
+
+itemsCtr.putItemLocal = async (req, res) => {
+  try {
+    const { _id } = req.body || {};
+    if (!_id) {
+      return res.status(400).json({
+        status: 400,
+        body: { message: "Ítem inválido." },
+        error: false,
+      });
+    }
+    const meses = Math.max(0, Math.round(Number(req.body.vidaUtilMeses) || 0));
+    const dias = Math.max(0, Math.round(Number(req.body.vidaUtilDias) || 0));
+    const und = Number(req.body.unidadesEmpaque);
+    const max = Number(req.body.unidadesEmpaqueMax);
+    const unidadesEmpaque = Number.isFinite(und) && und >= 0 ? Math.round(und) : 0;
+    const unidadesEmpaqueMax =
+      Number.isFinite(max) && max >= 0 ? Math.round(max) : unidadesEmpaque;
+    const row = await itemsModel.findByIdAndUpdate(
+      _id,
+      {
+        taraNombre: String(req.body.taraNombre || "").trim().toUpperCase(),
+        unidadesEmpaque,
+        unidadesEmpaqueMax,
+        vidaUtilMeses: meses,
+        vidaUtilDias: dias,
+        vidaUtilEtiqueta: etiquetaVidaUtil(meses, dias),
+        logisticaLocal: true,
+        fecha_actualizacion: new Date(),
+      },
+      { new: true }
+    );
+    if (!row) {
+      return res.status(404).json({
+        status: 404,
+        body: { message: "No se encontró el ítem." },
+        error: false,
+      });
+    }
+    return res.status(200).json({ status: 200, body: row, error: false });
+  } catch (error) {
+    console.error("putItemLocal:", error.message);
+    return res.status(500).json({
+      status: 500,
+      body: { message: "No se pudo guardar la logística del ítem." },
+      error: true,
+    });
+  }
+};
 
 itemsCtr.informacionUltimaSincronizacionItems = async (req, res) => {
 
@@ -418,7 +519,13 @@ itemsCtr.informacionUltimaSincronizacionItems = async (req, res) => {
 
   } catch (error) {
     console.error(error);
-
+    if (!res.headersSent) {
+      return res.status(500).json({
+        status: 500,
+        body: { message: "No se pudo leer la última sincronización de ítems." },
+        error: true,
+      });
+    }
   }
 
 }

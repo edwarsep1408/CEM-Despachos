@@ -1,0 +1,44 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bx-package page-banner-icon"></i>
+    <div>
+      <h1>Cargues Pendientes</h1>
+      <p>Asigne un despachador y agregue pedidos aprobados de su bodega.</p>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="cargando" class="spinner-container">
+  <mat-progress-spinner mode="indeterminate" diameter="50" color="primary"></mat-progress-spinner>
+</div>
+
+<div class="despacho-modulo despacho-modulo--wide" *ngIf="!cargando">
+  <div class="cargues-acciones">
+    <a routerLink="/configuracion/despacho/cargues/nuevo" class="cargues-link">Nuevo</a>
+  </div>
+
+  <div class="mat-elevation-z4">
+    <table class="table table-sm mb-0 cargues-tabla">
+      <thead>
+        <tr>
+          <th></th>
+          <th>ID</th>
+          <th>DESPACHADOR</th>
+          <th>BODEGA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of filas">
+          <td><button type="button" class="btn-link-accion" (click)="ver(row)">[ver]</button></td>
+          <td>{{ row.idCargue }}</td>
+          <td>{{ row.despachadorNombre }}</td>
+          <td>{{ row.bodega }} <span class="text-muted" *ngIf="row.bodegaNombre">· {{ row.bodegaNombre }}</span></td>
+        </tr>
+        <tr *ngIf="!filas.length">
+          <td colspan="4" class="text-muted py-3">No hay cargues pendientes.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small text-muted mt-2 mb-0">Total: {{ filas.length }} registros</p>
+</div>

@@ -140,6 +140,22 @@ export class SocketService {
     });
   }
 
+  eventBasculaDato() {
+    return new Observable((observer) => {
+      const handler = (msg: any) => observer.next(msg);
+      this.socket.on('bascula-dato', handler);
+      return () => this.socket.off('bascula-dato', handler);
+    });
+  }
+
+  eventBasculaEstado() {
+    return new Observable((observer) => {
+      const handler = (msg: any) => observer.next(msg);
+      this.socket.on('bascula-estado', handler);
+      return () => this.socket.off('bascula-estado', handler);
+    });
+  }
+
 
   public measureLatency(): Observable<number> {
     const startTime = Date.now();

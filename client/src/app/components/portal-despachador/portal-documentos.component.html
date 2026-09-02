@@ -1,0 +1,61 @@
+<div class="piso">
+  <a class="nav" (click)="volver()">Volver(F10)</a>
+  <app-piso-brand></app-piso-brand>
+  <h1>Cargue</h1>
+  <p><b>NUM:</b> {{ etiquetaCargue(idCargue, bodega) }}</p>
+
+  <p class="vacio" *ngIf="cargando">Cargando…</p>
+  <p class="vacio" *ngIf="!cargando && error">{{ error }}</p>
+  <p class="vacio" *ngIf="!cargando && !error && !documentos.length">Este cargue no tiene documentos.</p>
+
+  <table *ngIf="documentos.length">
+    <thead>
+      <tr>
+        <th></th>
+        <th></th>
+        <th>PEDIDO</th>
+        <th>ESTADO</th>
+        <th>CLIENTE</th>
+        <th>SUCURSAL</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let row of documentos; let i = index"
+        [class.sel]="i === sel"
+        [class.omit]="row.omitido"
+        (click)="sel = i"
+        (dblclick)="abrir(row)"
+      >
+        <td>
+          <button type="button" class="btn-piso" (click)="abrir(row); $event.stopPropagation()">
+            [ver]
+          </button>
+          <button
+            type="button"
+            class="btn-piso"
+            *ngIf="listoParaEtiquetas(row)"
+            (click)="imprimirEtiquetas(row, $event)"
+          >
+            [etiquetas]
+          </button>
+        </td>
+        <td>
+          <button type="button" class="btn-piso" [disabled]="row.omitido" (click)="omitir(row, $event)">omitir</button>
+          <button
+            type="button"
+            class="btn-piso"
+            *ngIf="puedeRepesar(row)"
+            (click)="repesar(row, $event)"
+          >
+            [repesar]
+          </button>
+        </td>
+        <td>{{ etiquetaPedido(row) }}</td>
+        <td>{{ row.estadoDespacho }}</td>
+        <td>{{ row.cliente }}</td>
+        <td>{{ row.sucursal }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

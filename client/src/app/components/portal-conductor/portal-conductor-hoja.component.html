@@ -1,0 +1,55 @@
+<div class="ruta">
+  <header class="ruta-top">
+    <div>
+      <p class="ruta-placa">{{ placa }}</p>
+      <p class="ruta-nombre">{{ conductor }}</p>
+    </div>
+    <button type="button" class="ruta-salir" (click)="salir()">Salir</button>
+  </header>
+
+  <p class="ruta-estado" *ngIf="cargando">Cargando hoja de ruta…</p>
+  <p class="ruta-estado ruta-error" *ngIf="!cargando && error">{{ error }}</p>
+  <p class="ruta-estado" *ngIf="!cargando && !error && !hojas.length">
+    No hay hoja de ruta vigente para esta placa.
+  </p>
+
+  <div *ngIf="hojas.length > 1" class="ruta-hojas">
+    <button
+      type="button"
+      *ngFor="let h of hojas"
+      class="ruta-hoja-chip"
+      [class.is-on]="hoja?._id === h._id"
+      (click)="elegirHoja(h)"
+    >
+      {{ h.idHoja }} · {{ h.fecha }}
+    </button>
+  </div>
+
+  <ng-container *ngIf="hoja">
+    <h1>Hoja {{ hoja.idHoja }}</h1>
+    <p class="ruta-meta">{{ hoja.fecha }} · {{ hoja.nombre }}</p>
+
+    <p class="ruta-estado" *ngIf="!hoja.facturas?.length">Esta hoja no tiene facturas.</p>
+
+    <button type="button" class="ruta-card" *ngFor="let doc of hoja.facturas" (click)="abrir(doc)">
+      <div class="ruta-card-head">
+        <strong>Factura {{ doc.nroFactura }}</strong>
+        <span class="ruta-badge" [attr.data-estado]="doc.entrega?.estado || 'pendiente'">
+          {{ etiquetaEstado(doc.entrega?.estado) }}
+        </span>
+      </div>
+      <p>{{ doc.cliente }}</p>
+      <p class="ruta-dir">{{ doc.direccion }} {{ doc.barrio }} {{ doc.municipio }}</p>
+      <p class="ruta-meta" *ngIf="doc.entrega?.nroNovedad">
+        Novedad No. {{ doc.entrega.nroNovedad | number: "1.0-0" }}
+        <span *ngIf="doc.entrega?.motivoEtiqueta"> · {{ doc.entrega.motivoEtiqueta }}</span>
+      </p>
+      <p class="ruta-valor" *ngIf="doc.valor">Factura {{ doc.valor | number: "1.0-0" }}</p>
+      <p class="ruta-meta" *ngIf="doc.recaudo?.estado">
+        Recibido {{ (doc.recaudo.totalRecaudado || 0) | number: "1.0-0" }}
+        de {{ (doc.recaudo.esperado || 0) | number: "1.0-0" }}
+        · {{ etiquetaRecaudo(doc.recaudo) }}
+      </p>
+    </button>
+  </ng-container>
+</div>

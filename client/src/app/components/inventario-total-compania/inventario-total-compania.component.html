@@ -8,10 +8,9 @@
     <div class="col col-sm-6 col-md-6 col-lg-6 col-xl-6">
 
       <h3 class="section-title">
-        Inventario total compañía &nbsp;
-        <span [matTooltip]=" 'Tiempo real'" matTooltipPosition="above"><i class="bi bi-arrow-clockwise spinning">
-          </i></span>
+        Inventario total compañía
       </h3>
+      <p class="text-muted small mb-0">Existencias en tiempo real.</p>
     </div>
     <div class="col col-sm-6 col-md-6 col-lg-6 col-xl-6 text-end">
     </div>
@@ -40,7 +39,7 @@
       <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
         <div class="card-body text-center">
           <i class="bi bi-truck fs-1 mb-3"></i>
-          <h5 class="card-title text-dark">Kgs en transito: {{totalKgMovimento | number: '1.0-2'}}</h5>
+          <h5 class="card-title text-dark">Kgs en transito: <span *ngIf="transitoCargando">Cargando…</span><span *ngIf="!transitoCargando">{{totalKgMovimento | number: '1.0-2'}}</span></h5>
         </div>
       </div>
     </div>
@@ -49,7 +48,7 @@
       <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
         <div class="card-body text-center">
           <i class="bi bi-basket2 fs-1 mb-3"></i>
-          <h5 class="card-title text-dark">Unidades en transito: {{totalUnidadesMovimiento | number: '1.0-0'}}</h5>
+          <h5 class="card-title text-dark">Unidades en transito: <span *ngIf="transitoCargando">Cargando…</span><span *ngIf="!transitoCargando">{{totalUnidadesMovimiento | number: '1.0-0'}}</span></h5>
         </div>
       </div>
     </div>

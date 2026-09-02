@@ -1,0 +1,32 @@
+.firma-mini {
+  height: 36px;
+  max-width: 120px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  padding: 2px;
+}
+
+.firma-pad {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: 140px;
+  border: 1px solid #adb5bd;
+  border-radius: 6px;
+  background: #fff;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.firma-acciones {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.offcanvas-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #dee2e6;
+}

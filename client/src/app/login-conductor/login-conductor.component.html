@@ -1,0 +1,52 @@
+<div class="login-shell">
+  <div class="login-card-wrap">
+    <div class="login-logos">
+      <img src="assets/img/logotipo.webp" width="120" alt="Pollocoa" />
+    </div>
+
+    <div class="login-text">
+      <p class="login-title">Entregas</p>
+      <p class="login-subtitle">Ingrese con la placa del vehículo</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-floating mb-3">
+        <input
+          id="placa"
+          type="text"
+          class="form-control text-uppercase"
+          formControlName="placa"
+          placeholder="ABC123"
+          autocomplete="username"
+          maxlength="6"
+          inputmode="text"
+          (input)="onPlacaInput($event)"
+        />
+        <label for="placa">Placa (ABC123)</label>
+      </div>
+      <p class="login-placa-hint" *ngIf="form.get('placa')?.touched && form.get('placa')?.invalid">
+        Sin guiones: 3 letras y 3 números.
+      </p>
+
+      <div class="form-floating mb-3">
+        <input
+          id="password"
+          type="password"
+          class="form-control"
+          formControlName="password"
+          placeholder="Contraseña"
+          autocomplete="current-password"
+        />
+        <label for="password">Contraseña</label>
+      </div>
+
+      <button class="login-submit" type="submit" [disabled]="cargando">
+        {{ cargando ? "Ingresando…" : "Entrar" }}
+      </button>
+    </form>
+
+    <p class="login-hint">
+      <a routerLink="/login">Entrar como administrador</a>
+    </p>
+  </div>
+</div>

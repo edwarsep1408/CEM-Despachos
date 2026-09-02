@@ -10,6 +10,7 @@ router.delete('/delete-bodega/:_id', [auth.ensureAuth], bodegaCtr.deleteBodega)
 router.get('/consultarInventarioBodega/:_bodega', [auth.ensureAuth], bodegaCtr.getInventarioBodega);
 router.get('/inventarioTiempoReal', [auth.ensureAuth],bodegaCtr.actualizarInformacionTiemporeal);
 router.get('/inventarioTotalcompania', [auth.ensureAuth], bodegaCtr.inventarioTotalCompania);
+router.get('/inventarioTransito', [auth.ensureAuth], bodegaCtr.inventarioTransito);
 router.get('/get-bodegas-inventario',[auth.ensureAuth], bodegaCtr.getBodegasInventarioctr);
 
 export default router

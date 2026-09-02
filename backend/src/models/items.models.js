@@ -13,6 +13,14 @@ const ItemSchema  = new Schema({
     linea: {type: String},
     estado: {type: String},
     combinacion: {type: String},
+    vidaUtilMeses: { type: Number, default: 0 },
+    vidaUtilDias: { type: Number, default: 0 },
+    vidaUtilEtiqueta: { type: String, default: "" },
+    unidadesEmpaque: { type: Number, default: 0 },
+    unidadesEmpaqueMax: { type: Number, default: 0 },
+    taraNombre: { type: String, default: "" },
+    estadoFrio: { type: String, default: "" },
+    logisticaLocal: { type: Boolean, default: false },
     fecha_creacion: { type: Date, default: Date.now() },
     fecha_actualizacion: { type: Date, default: null }
 });

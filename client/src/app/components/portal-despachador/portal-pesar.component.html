@@ -1,0 +1,142 @@
+<div class="piso" *ngIf="linea">
+  <div class="piso-atajos">
+    <button type="button" class="link" (click)="guardar()">Guardar(g)</button>
+    <button type="button" class="link" (click)="pedirUnidades()">Unidades(u)</button>
+    <button type="button" class="link" (click)="registrar()">Registrar Peso(+)</button>
+    <button type="button" class="link" *ngIf="puedeRepesar" (click)="repesar()">Repesar(r)</button>
+    <button type="button" class="link" (click)="habilitarTara()">Tara(t)</button>
+    <button type="button" class="link" (click)="volver()">Volver(F10)</button>
+    <button type="button" class="link" (click)="pedirLote()">Lote(L)</button>
+    <button type="button" class="link" (click)="pedirTemperatura()">Temperatura(F8)</button>
+    <app-piso-brand></app-piso-brand>
+  </div>
+
+  <h1>{{ linea.producto }}</h1>
+  <p class="piso-item-meta">
+    <span class="piso-pedido-en" [attr.data-um]="pedidoEn">Pedido en {{ pedidoEn }}</span>
+    <span *ngIf="linea.estadoFrio" class="piso-frio" [class.piso-frio-cong]="linea.estadoFrio === 'CONGELADO'" [class.piso-frio-ref]="linea.estadoFrio === 'REFRIGERADO'">{{ linea.estadoFrio }}</span>
+    <span *ngIf="linea.taraNombre">Tara {{ linea.taraNombre }}</span>
+    <span *ngIf="linea.unidadesEmpaque">{{ linea.unidadesEmpaque }} und / empaque</span>
+  </p>
+
+  <div class="piso-pesar">
+    <div>
+      <div class="piso-display" (dblclick)="pedirPesoManual()" title="Doble clic para peso manual">
+        {{ pesoMostrado }}
+      </div>
+      <span class="piso-xx">{{ conectado ? "KG" : "XX" }}</span>
+      <p class="piso-estado">
+        <ng-container *ngIf="conectando && !conectado">Conectando con la báscula{{ bascula?.ip ? " " + bascula?.ip + ":" + bascula?.puerto : "" }}{{ nombreMuelle(bascula?.muelle) ? " · " + nombreMuelle(bascula?.muelle) : "" }}…</ng-container>
+        <ng-container *ngIf="!conectando && !conectado">
+          {{ errorBascula || "Sin báscula." }}
+          <ng-container *ngIf="bascula?.nombre"> ({{ bascula?.nombre }})</ng-container>
+        </ng-container>
+        <ng-container *ngIf="conectado">
+          Báscula en vivo
+          <ng-container *ngIf="nombreMuelle(bascula?.muelle)"> {{ nombreMuelle(bascula?.muelle) }}</ng-container>
+          <ng-container *ngIf="bascula?.nombre"> {{ bascula?.nombre }}</ng-container>
+          <ng-container *ngIf="bascula?.ip"> {{ bascula?.ip }}:{{ bascula?.puerto }}</ng-container>
+        </ng-container>
+      </p>
+
+      <div class="piso-kpis">
+        <div class="box">
+          <h3>PEDIDO</h3>
+          <div>{{ linea.unidades || 0 }} unid. pedidas</div>
+          <div>{{ (linea.pesoPedido || 0) | number : "1.1-2" }} kg pedidos</div>
+        </div>
+        <div class="box">
+          <h3>DESPACHADO</h3>
+          <div>{{ linea.cd || 0 }} unid. despachadas</div>
+          <div>{{ (linea.pd || 0) | number : "1.1-2" }} kg despachados</div>
+        </div>
+        <div class="box" [attr.data-semaforo]="avance.estado">
+          <h3>FALTANTE</h3>
+          <div class="piso-semaforo">{{ avance.etiqueta }} · {{ avance.pct | number : "1.0-1" }}%</div>
+          <ng-container *ngIf="avance.estado !== 'exceso'; else excesoTpl">
+            <div>{{ faltanteUnd }} unid.</div>
+            <div>{{ faltanteKg | number : "1.1-2" }} kg</div>
+          </ng-container>
+          <ng-template #excesoTpl>
+            <div>Exceso {{ excesoUnd }} unid.</div>
+            <div>Exceso {{ excesoKg | number : "1.1-2" }} kg</div>
+          </ng-template>
+        </div>
+      </div>
+
+      <div class="piso-campos">
+        <label>LOTE <input type="date" [(ngModel)]="lote" (ngModelChange)="onLoteChange()" /></label>
+        <label>
+          TEMPERATURA
+          <input
+            inputmode="decimal"
+            placeholder="0.0"
+            [(ngModel)]="temperatura"
+            (blur)="normalizarTemperatura()"
+          />
+        </label>
+        <label>
+          FECHA DE VENCIMIENTO
+          <input type="date" [(ngModel)]="fechaVencimiento" />
+          <small *ngIf="linea.vidaUtilEtiqueta && lote">Fecha de lote + {{ linea.vidaUtilEtiqueta }}</small>
+          <small *ngIf="linea.vidaUtilEtiqueta && !lote">Indique la fecha del lote para calcular el vencimiento.</small>
+          <small *ngIf="!linea.vidaUtilEtiqueta" class="piso-estado">Sin vida útil en el ítem; escríbala a mano.</small>
+        </label>
+        <label>
+          UNIDADES CAPTURA
+          <input type="number" min="1" step="1" [(ngModel)]="unidadesCap" />
+          <small *ngIf="linea.unidadesEmpaque">Por defecto {{ linea.unidadesEmpaque }} und por {{ linea.taraNombre || "empaque" }}; al indicar la tara se multiplica.</small>
+        </label>
+      </div>
+    </div>
+
+    <div class="piso-taras">
+      <h2>TARA</h2>
+      <label class="piso-tara-fila" *ngFor="let t of taras" [class.piso-tara-item]="esTaraItem(t)">
+        <span>{{ t.nombre }}<ng-container *ngIf="esTaraItem(t)"> *</ng-container></span>
+        <input
+          #taraInput
+          type="number"
+          min="0"
+          step="1"
+          [(ngModel)]="t.cuenta"
+          [disabled]="!editarTara"
+          (ngModelChange)="onTaraCuenta()"
+          (keydown.enter)="aceptarTara(); $event.preventDefault()"
+        />
+      </label>
+      <button type="button" class="btn-piso piso-tara-ok" (click)="aceptarTara()">
+        Aceptar
+      </button>
+      <p class="piso-estado">Tara(t) para escribir cantidades · Tara {{ taraTotal | number : "1.1-2" }} kg</p>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>UNIDADES</th>
+        <th>PESO</th>
+        <th>TARA</th>
+        <th>LOTE</th>
+        <th>P_NETO</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let p of linea.pesajes || []; let i = index">
+        <td>{{ i + 1 }}</td>
+        <td>{{ p.unidades }}</td>
+        <td>{{ p.peso }}</td>
+        <td>{{ p.tara }}</td>
+        <td>{{ p.lote }}</td>
+        <td>{{ p.pNeto }}</td>
+        <td>
+          <button type="button" class="btn-piso" [disabled]="docCerrado" (click)="quitar(p)">quitar</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="piso vacio" *ngIf="error && !linea">{{ error }}</p>

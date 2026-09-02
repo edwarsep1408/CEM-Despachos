@@ -21,6 +21,7 @@
 <div class="content-title" *ngIf="!cargando">
   <div class="col-mb-6">
     <h3>Items</h3>
+    <p class="text-muted small mb-0">Maestro de productos sincronizado con SIESA. Tara, unidades de empaque y vida útil se editan aquí y no se pisan al sincronizar.</p>
   </div>
 
   <div class="col-mb-6 d-grid gap-2 d-md-flex justify-content-md-end">
@@ -96,6 +97,26 @@
       <td mat-cell *matCellDef="let element">{{ element.undAdicional }}</td>
     </ng-container>
 
+    <ng-container matColumnDef="vidaUtilEtiqueta">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>VIDA ÚTIL</th>
+      <td mat-cell *matCellDef="let element">{{ element.vidaUtilEtiqueta || "—" }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="taraNombre">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>TARA</th>
+      <td mat-cell *matCellDef="let element">{{ element.taraNombre || "—" }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="unidadesEmpaque">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>UND EMPAQUE</th>
+      <td mat-cell *matCellDef="let element">{{ element.unidadesEmpaque || "—" }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="estadoFrio">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>FRÍO</th>
+      <td mat-cell *matCellDef="let element">{{ element.estadoFrio || "—" }}</td>
+    </ng-container>
+
     <ng-container matColumnDef="estado">
       <th mat-header-cell *matHeaderCellDef mat-sort-header>ESTADO</th>
       <td mat-cell *matCellDef="let element">
@@ -109,12 +130,99 @@
       </td>
     </ng-container>
 
+    <ng-container matColumnDef="acciones">
+      <th mat-header-cell *matHeaderCellDef>ACCIONES</th>
+      <td mat-cell *matCellDef="let element">
+        <button
+          class="btn btn-edit"
+          type="button"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#offcanvasItemEdit"
+          aria-controls="offcanvasItemEdit"
+          (click)="onClickDato(element)"
+          title="Editar tara, empaque y vida útil"
+        >
+          <i class="bi bi-pencil-square"></i>
+        </button>
+      </td>
+    </ng-container>
+
     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
     <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
   </table>
 
   <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page of periodic elements">
   </mat-paginator>
+</div>
+
+<div class="offcanvas offcanvas-end offcanvasEdit" tabindex="-1" id="offcanvasItemEdit" aria-labelledby="offcanvasItemEditLabel">
+  <form (submit)="onUpdate(); $event.preventDefault()" #EditForm="ngForm">
+    <div class="offcanvas-header">
+      <h6 class="offcanvas-title" id="offcanvasItemEditLabel">Logística del ítem</h6>
+    </div>
+    <div class="offcanvas-body">
+      <p class="text-muted small">{{ editForm.referencia }} · {{ editForm.descripcion }}</p>
+      <p class="text-muted small">Estos datos no vienen de SIESA. Al sincronizar se conservan.</p>
+      <div class="form-floating mb-3">
+        <select class="form-select" id="editTara" [(ngModel)]="editForm.taraNombre" name="taraNombre">
+          <option value="">Sin tara</option>
+          <option *ngIf="editForm.taraNombre && !taraEnCatalogo(editForm.taraNombre)" [value]="editForm.taraNombre">{{ editForm.taraNombre }}</option>
+          <option *ngFor="let t of taras" [value]="t.nombre">{{ t.nombre }}</option>
+        </select>
+        <label for="editTara">Tara</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input
+          type="number"
+          min="0"
+          class="form-control"
+          id="editUndEmpaque"
+          [(ngModel)]="editForm.unidadesEmpaque"
+          name="unidadesEmpaque"
+        />
+        <label for="editUndEmpaque">Unidades de empaque</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input
+          type="number"
+          min="0"
+          class="form-control"
+          id="editUndMax"
+          [(ngModel)]="editForm.unidadesEmpaqueMax"
+          name="unidadesEmpaqueMax"
+        />
+        <label for="editUndMax">Máximo und. empaque</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input
+          type="number"
+          min="0"
+          class="form-control"
+          id="editMeses"
+          [(ngModel)]="editForm.vidaUtilMeses"
+          name="vidaUtilMeses"
+        />
+        <label for="editMeses">Vida útil (meses)</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input
+          type="number"
+          min="0"
+          class="form-control"
+          id="editDias"
+          [(ngModel)]="editForm.vidaUtilDias"
+          name="vidaUtilDias"
+        />
+        <label for="editDias">Vida útil (días)</label>
+      </div>
+    </div>
+    <div class="offcanvas-footer">
+      <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas" data-bs-dismiss-edit="true">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="!editForm._id">Guardar</button>
+      </div>
+    </div>
+  </form>
 </div>
 
 <!-- <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">

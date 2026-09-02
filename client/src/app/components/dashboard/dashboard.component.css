@@ -11,15 +11,10 @@
   height: 38px;
 
 }
-.cardInfoInventario{
-  
-  /* background-image: url('../../../assets/img/bannerVertical.png'); */
-  background-image: url('../../../assets/img/backgroundImg.png');
-  /* background-color: rgba(0, 0, 0, 0.6); */
- /*  opacity: 0.7; 
- filter: brightness(0.7);*/
- /* background-color: #f7d168 !important;  */
-
+.cardInfoInventario {
+  background: var(--pollocoa-blue) !important;
+  background-image: none !important;
+  border-radius: 1rem;
 }
 .liTables{
   list-style: none;

@@ -2,4 +2,10 @@ backend/node_modules
 backend/dist
 client/node_modules
 client/dist
+client/.angular
+agente-bascula/node_modules
 .env
+**/.env
+.cursor
+.DS_Store
+**/.DS_Store

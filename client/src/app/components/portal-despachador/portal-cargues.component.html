@@ -1,0 +1,40 @@
+<div class="piso">
+  <a class="nav" (click)="salir()">Salir(F10)</a>
+  <app-piso-brand></app-piso-brand>
+  <h1>Cargues</h1>
+
+  <p class="piso-muelle" *ngIf="muelleNombre">
+    <b>Muelle:</b> {{ muelleNombre }}
+    <a class="nav" (click)="cambiarMuelle()">Cambiar</a>
+  </p>
+
+  <p class="vacio" *ngIf="cargando">Cargando…</p>
+  <p class="vacio" *ngIf="!cargando && error">{{ error }}</p>
+  <p class="vacio" *ngIf="!cargando && !error && !cargues.length">
+    No hay cargues enviados a piso. En Cargues use «Guardar y Enviar a Despachos».
+  </p>
+
+  <table *ngIf="cargues.length">
+    <thead>
+      <tr>
+        <th></th>
+        <th>ID</th>
+        <th>DESPACHADOR</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let row of cargues; let i = index"
+        [class.sel]="i === sel"
+        (click)="sel = i"
+        (dblclick)="abrir(row)"
+      >
+        <td>
+          <button type="button" class="btn-piso" (click)="abrir(row); $event.stopPropagation()">[ver]</button>
+        </td>
+        <td>{{ etiquetaCargue(row.idCargue, row.bodega) }}</td>
+        <td>{{ row.despachador }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

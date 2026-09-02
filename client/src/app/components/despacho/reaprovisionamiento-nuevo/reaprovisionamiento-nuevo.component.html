@@ -1,0 +1,61 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bx-transfer page-banner-icon"></i>
+    <div>
+      <h1>Cargar reaprovisionamiento CEDIS</h1>
+      <p>
+        Un Excel por centro. Solo se lee la hoja <strong>FORMATO</strong>: el CEDIS va en A1 (ej. CEDI NORTE) y las
+        líneas con kilos y unidades.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="despacho-modulo">
+  <form class="hoja-form" (submit)="$event.preventDefault(); aceptar()">
+    <div class="hoja-form-row">
+      <label for="reaproFecha">FECHA</label>
+      <input id="reaproFecha" type="date" class="form-control" [(ngModel)]="fecha" name="fecha" required />
+    </div>
+    <div class="hoja-form-row">
+      <label for="reaproOrigen">ORIGEN</label>
+      <select id="reaproOrigen" class="form-select" [(ngModel)]="bodegaOrigen" name="bodegaOrigen" required>
+        <option value=""></option>
+        <option *ngFor="let item of bodegas" [value]="item.codigo">{{ etiqueta(item) }}</option>
+      </select>
+    </div>
+    <div class="hoja-form-row">
+      <label for="reaproExcel">EXCEL CEDIS</label>
+      <input
+        id="reaproExcel"
+        type="file"
+        class="form-control"
+        accept=".xlsx,.xls"
+        name="archivo"
+        (change)="onArchivo($event)"
+        required
+      />
+    </div>
+    <div class="hoja-form-row">
+      <label for="reaproObs">OBSERVACION</label>
+      <input
+        id="reaproObs"
+        type="text"
+        class="form-control"
+        [(ngModel)]="observacion"
+        name="observacion"
+        autocomplete="off"
+        placeholder="Opcional. Si va vacío se usa el CEDIS del Excel."
+      />
+    </div>
+    <p class="small text-muted" style="margin: 0 0 12px 176px; max-width: 420px">
+      El destino no se elige aquí: sale de A1 de FORMATO. Ejemplo: <em>REAP.NORTE.xlsx</em> → CEDI NORTE.
+    </p>
+    <div class="hoja-form-acciones">
+      <button type="submit" class="btn btn-secondary" [disabled]="!bodegaOrigen || !archivo || guardando">
+        Aceptar
+      </button>
+      <a routerLink="/configuracion/despacho/reaprovisionamiento" class="btn btn-secondary">cancelar</a>
+    </div>
+  </form>
+</div>

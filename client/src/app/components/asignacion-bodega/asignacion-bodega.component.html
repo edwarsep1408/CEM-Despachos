@@ -1,0 +1,49 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bx-home page-banner-icon"></i>
+    <div>
+      <h1>Asignación de bodega</h1>
+      <p>Cada despachador solo podrá cargar pedidos de la bodega que tenga asignada. El muelle es del puesto de trabajo, no de la persona.</p>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="cargando" class="spinner-container">
+  <mat-progress-spinner mode="indeterminate" diameter="50" color="primary"></mat-progress-spinner>
+</div>
+
+<div class="despacho-modulo despacho-modulo--wide" *ngIf="!cargando">
+  <p class="text-muted small" *ngIf="!despachadores.length">
+    No hay usuarios con perfil Despachador. Créelos en Seguridad → Usuarios.
+  </p>
+
+  <div class="mat-elevation-z4" *ngIf="despachadores.length">
+    <table class="table table-sm mb-0 asignacion-tabla">
+      <thead>
+        <tr>
+          <th>USUARIO</th>
+          <th>NOMBRE</th>
+          <th>BODEGA</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of despachadores">
+          <td>{{ row.usuario }}</td>
+          <td>{{ row.nombre }}</td>
+          <td>
+            <select class="form-select form-select-sm" [(ngModel)]="seleccion[row._id]">
+              <option value="">Sin asignar</option>
+              <option *ngFor="let bodega of bodegas" [value]="bodega.codigo">
+                {{ bodega.codigo }} — {{ bodega.nombre }}
+              </option>
+            </select>
+          </td>
+          <td>
+            <button type="button" class="btn btn-sm btn-primary" (click)="guardar(row)">Guardar</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

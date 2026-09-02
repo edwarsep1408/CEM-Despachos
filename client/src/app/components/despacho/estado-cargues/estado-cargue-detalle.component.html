@@ -1,0 +1,100 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bx-bar-chart-alt-2 page-banner-icon"></i>
+    <div>
+      <h1>Estado de cargue {{ cargue?.idCargue }}</h1>
+      <p *ngIf="cargue">
+        {{ cargue.despachador }} · {{ cargue.bodega }} ·
+        <span class="estado-pill" [attr.data-estado]="cargue.estado">{{ etiqueta(cargue.estado) }}</span>
+        · Avance {{ cargue.avance }}%
+      </p>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="cargando" class="spinner-container">
+  <mat-progress-spinner mode="indeterminate" diameter="50" color="primary"></mat-progress-spinner>
+</div>
+
+<div class="despacho-modulo despacho-modulo--wide" *ngIf="!cargando && cargue">
+  <p class="mb-3">
+    <a routerLink="/configuracion/despacho/estado-cargues" class="cargues-link">Volver</a>
+    <button
+      type="button"
+      class="btn-link-accion ms-3"
+      *ngIf="cargue.estado === 'COMPLETADO'"
+      (click)="devolver()"
+    >
+      [devolver a despachos]
+    </button>
+  </p>
+
+  <p class="small mb-2">
+    Documentos despachados {{ cargue.docsDesp }}/{{ cargue.totalDocumentos }}
+    · UND {{ cargue.undDesp }}/{{ cargue.undPedido }}
+    · KG {{ cargue.pesoDesp | number : "1.1-2" }}/{{ cargue.pesoPedido | number : "1.1-2" }}
+  </p>
+
+  <div class="mat-elevation-z4 mb-4">
+    <table class="table table-sm mb-0 cargues-tabla">
+      <thead>
+        <tr>
+          <th></th>
+          <th>PEDIDO</th>
+          <th>CLIENTE</th>
+          <th>ESTADO</th>
+          <th>LÍNEAS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          *ngFor="let doc of cargue.documentos"
+          [class.table-primary]="docSel?._id === doc._id"
+          (click)="docSel = doc"
+        >
+          <td><button type="button" class="btn-link-accion">[ver]</button></td>
+          <td>{{ etiquetaPedido(doc) }}</td>
+          <td>{{ doc.cliente }}</td>
+          <td><span class="estado-pill" [attr.data-estado]="doc.estado">{{ etiqueta(doc.estado) }}</span></td>
+          <td>{{ doc.totalLineas }}</td>
+        </tr>
+        <tr *ngIf="!cargue.documentos?.length">
+          <td colspan="5" class="text-muted py-3">Sin documentos.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="h6 mb-2" *ngIf="docSel">Productos · {{ etiquetaPedido(docSel) }}</h2>
+  <div class="mat-elevation-z4" *ngIf="docSel">
+    <table class="table table-sm mb-0 cargues-tabla">
+      <thead>
+        <tr>
+          <th>COD</th>
+          <th>PRODUCTO</th>
+          <th>ESTADO</th>
+          <th>PEDIDO EN</th>
+          <th>UNID. PEDIDAS</th>
+          <th>KG PEDIDOS</th>
+          <th>UNID. DESP.</th>
+          <th>KG DESP.</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let l of docSel.lineas || []">
+          <td>{{ l.codigo }}</td>
+          <td>{{ l.producto }}</td>
+          <td><span class="estado-pill" [attr.data-estado]="l.estado">{{ etiqueta(l.estado) }}</span></td>
+          <td>{{ l.pedidoEn || "—" }}</td>
+          <td>{{ l.unidades }}</td>
+          <td>{{ l.pesoPedido | number : "1.1-2" }}</td>
+          <td>{{ l.cd }}</td>
+          <td>{{ (l.pd || 0) | number : "1.1-2" }}</td>
+        </tr>
+        <tr *ngIf="!(docSel.lineas || []).length">
+          <td colspan="8" class="text-muted py-3">Este documento no tiene líneas de despacho aún.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

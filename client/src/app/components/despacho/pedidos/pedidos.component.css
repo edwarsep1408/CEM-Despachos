@@ -1,0 +1,201 @@
+.pedidos-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pedidos-vista-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.pedidos-filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 10px 12px;
+}
+
+.pedidos-filtros-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #4b5563;
+  margin: 0;
+}
+
+.pedidos-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.pedidos-sel {
+  font-size: 13px;
+  color: #374151;
+}
+
+.pedidos-tabla-wrap {
+  position: relative;
+  min-height: 180px;
+}
+
+.pedidos-tabla-spinner {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.pedidos-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  font-size: 13px;
+}
+
+.picking-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 16px 12px;
+  overflow: auto;
+}
+
+.picking-panel {
+  background: #fff;
+  width: min(1100px, 100%);
+  max-height: calc(100vh - 32px);
+  border-radius: 12px;
+  padding: 0 0 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.picking-panel--wide {
+  width: min(1180px, 100%);
+}
+
+.picking-panel-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 14px 18px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 12px 12px 0 0;
+}
+
+.picking-panel-bar > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.picking-sheet {
+  padding: 16px 18px 8px;
+  overflow: auto;
+}
+
+.picking-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.picking-head h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.picking-head p {
+  margin: 0 0 2px;
+  font-size: 13px;
+}
+
+.picking-head b {
+  display: inline-block;
+  min-width: 140px;
+}
+
+.picking-logo {
+  width: 140px;
+  height: auto;
+}
+
+.picking-comercial,
+.picking-piso {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 14px;
+  font-size: 12px;
+}
+
+.picking-comercial th,
+.picking-comercial td,
+.picking-piso th,
+.picking-piso td {
+  border: 1px solid #1f2937;
+  padding: 5px 6px;
+  text-align: left;
+}
+
+.picking-comercial th,
+.picking-piso th {
+  background: #8ec3e6;
+  color: #113;
+  border-color: #1d4f91;
+}
+
+.picking-comercial td,
+.picking-piso td {
+  border-color: #1d4f91;
+}
+
+.picking-piso .dash {
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.detalle-pager {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.picking-total {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.picking-subtitulo {
+  margin: 18px 0 8px;
+  font-size: 15px;
+}
+
+@media (max-width: 900px) {
+  .pedidos-filtros-grid {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+}

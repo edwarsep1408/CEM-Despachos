@@ -1,0 +1,23 @@
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 180px;
+}
+
+.asignacion-tabla thead {
+  background: #93c5fd;
+}
+
+.asignacion-tabla th {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.asignacion-tabla select {
+  min-width: 220px;
+}
+
+.asignacion-tabla select.asignacion-muelle {
+  min-width: 8.5rem;
+}

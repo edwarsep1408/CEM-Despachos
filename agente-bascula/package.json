@@ -1,0 +1,15 @@
+{
+  "name": "agente-bascula",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capa local del PC despachador: TCP al USR, peso al portal en localhost.",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2"
+  }
+}

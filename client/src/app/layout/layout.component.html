@@ -1,134 +1,103 @@
-<div class="layout has-sidebar fixed-sidebar fixed-header">
-  <aside id="sidebar" class="sidebar break-point-sm has-bg-image collapsed">
-    <div class="image-wrapper">
-      <img src="../../assets/img/LOGOTIPO.svg" alt="sidebar background" />
+<nav class="layout-navbar">
+  <div class="layout-navbar-inner">
+    <div class="layout-navbar-start">
+      <button
+        type="button"
+        class="layout-menu-btn"
+        (click)="toggleSidebar()"
+        aria-label="Alternar menú"
+      >
+        <i class="bx bx-menu"></i>
+      </button>
+
+      <a [routerLink]="inicioRuta" class="layout-brand">
+        <img
+          src="assets/img/logotipo.webp"
+          alt="Pollocoa"
+          class="layout-brand-logo layout-brand-logo--pollocoa"
+        />
+        <span class="layout-brand-name">Logística y Distribución</span>
+      </a>
     </div>
-    <div class="sidebar-layout">
-      <div class="sidebar-header">
-        <div class="pro-sidebar-logo">
-          <img src="../../assets/img/logopollocoa.png" alt="" class="logoSideBar">
-        </div>
-      </div>
-      <div class="sidebar-content">
-        <nav class="menu open-current-submenu">
-          <ul>
 
-            <li class="menu-header" style="padding-top: 20px">
-              <span> Menú </span>
-            </li>
-
-            <li class="menu-item">
-              <a [routerLink]="'/configuracion/dashboard'">
-                <span class="menu-icon">
-                  <i class="bi bi-speedometer2"></i>
-                </span>
-                <span class="menu-title">Dashboard</span>
-              </a>
-            </li>
-
-            <li class="menu-item">
-              <a [routerLink]="'/configuracion/inventarioTotalCompania'">
-                <span class="menu-icon">
-                  <i class="bi bi-arrow-clockwise spinning"></i>
-                </span>
-                <span class="menu-title">Inventario compañía</span>
-              </a>
-            </li>
-
-            <li class="menu-item">
-              <a [routerLink]="'/configuracion/dashboardBodegas'">
-                <span class="menu-icon">
-                  <i class="bi bi-grid-3x3"></i>
-                </span>
-                <span class="menu-title">Inventario bodegas </span>
-              </a>
-            </li>
-
-            <li class="menu-item">
-              <a [routerLink]="'/configuracion/reporteBodega'">
-                <span class="menu-icon">
-                  <i class="bi bi-file-earmark-spreadsheet-fill"></i>
-                </span>
-                <span class="menu-title">Reportes</span>
-              </a>
-            </li>
-
-            <li class="menu-item">
-              <a [routerLink]="'/gestionarInventario'">
-                <span class="menu-icon">
-                  <i class="bi bi-ui-checks-grid"></i>
-                </span>
-                <span class="menu-title">Inventario</span>
-              </a>
-            </li>
-
-            <li class="menu-item">
-              <a [routerLink]="'/configuracion/items'">
-                <span class="menu-icon">
-                  <i class="bi bi-list-check"></i>
-                </span>
-                <span class="menu-title">Items</span>
-              </a>
-            </li>
-            
-            <li class="menu-item">
-              <a [routerLink]="'/configuracion/bodegas'">
-                <span class="menu-icon">
-                  <i class="bi bi-house-gear"></i>
-                </span>
-                <span class="menu-title">Bodegas</span>
-              </a>
-            </li>
-
-            <li class="menu-item">
-              <a [routerLink]="'/configuracion/mesas'">
-                <span class="menu-icon">
-                  <i class="bi bi-file-spreadsheet-fill"></i>
-                </span>
-                <span class="menu-title">Mesas</span>
-              </a>
-            </li>
-
-            <li class="menu-item">
-              <a [routerLink]="'/configuracion/colaboradores'">
-                <span class="menu-icon">
-                  <i class="bi bi-person-video2"></i>
-                </span>
-                <span class="menu-title">Colaboradores</span>
-              </a>
-            </li>
-            
-          </ul>
-        </nav>
+    <div class="layout-user">
+      <i class="bx bx-user layout-user-icon"></i>
+      <div class="layout-user-text">
+        <span class="layout-user-name">{{ identity }}</span>
+        <span class="layout-user-role">{{ perfilNombre }} · Pollocoa</span>
       </div>
     </div>
-  </aside>
-  <div id="overlay" class="overlay" (click)="toggleOverlay()"></div>
-  <div class="layout">
-    <nav class="navbar bg-body-tertiary">
-      <div class="container-fluid">
-        <a id="btn-collapse" class="nav-link" (click)="toggleSidebar()">
-          <i class="bi bi-list"></i>
-        </a>
-        <div class="nav-item dropdown">
-          <a class="btn dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <img src="../../../assets/img/logopollocoa.png" alt="logo" class="logo-dropdown" />
-            <!-- {{identity.nombre}} -->
-          </a>
-
-          <ul class="dropdown-menu">
-            <li>
-              <a class="dropdown-item" href="/"><i class="bi bi-door-open-fill"></i> Regresar al inicio</a>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </nav>
-    <main class="content">
-      <router-outlet></router-outlet>
-    </main>
-
-    <div class="overlay"></div>
-    
   </div>
-</div>
+</nav>
+
+<aside
+  class="layout-sidebar"
+  [class.layout-sidebar--collapsed]="isSidebarCollapsed() && !isSidebarHovered()"
+  [class.layout-sidebar--expanded]="!isSidebarCollapsed() || isSidebarHovered()"
+  (mouseenter)="onMouseEnter()"
+  (mouseleave)="onMouseLeave()"
+>
+  <div class="layout-sidebar-scroll">
+    <ul class="layout-nav">
+      <li *ngFor="let item of mainVisibles; trackBy: trackItem">
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="nav-link-active"
+          class="layout-nav-link"
+        >
+          <i class="bx layout-nav-icon" [ngClass]="item.icon"></i>
+          <span class="layout-nav-label" *ngIf="showLabels()">{{ item.label }}</span>
+        </a>
+      </li>
+
+      <li *ngFor="let group of gruposVisibles; trackBy: trackGroup">
+        <button
+          type="button"
+          class="layout-nav-link"
+          [class.nav-link-active]="isGroupActive(group.id)"
+          (click)="toggleGroup(group.id, $event)"
+        >
+          <i class="bx layout-nav-icon" [ngClass]="group.icon"></i>
+          <ng-container *ngIf="showLabels()">
+            <span class="layout-nav-label">{{ group.label }}</span>
+            <i
+              class="bx bx-chevron-down layout-nav-caret"
+              [class.layout-nav-caret--open]="isGroupOpen(group.id)"
+            ></i>
+          </ng-container>
+        </button>
+        <ul class="layout-nav-sub" *ngIf="isGroupOpen(group.id) && showLabels()">
+          <li *ngFor="let item of group.items; trackBy: trackItem">
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="nav-link-active"
+              class="layout-nav-link layout-nav-link--sub"
+            >
+              <i class="bx layout-nav-icon" [ngClass]="item.icon"></i>
+              <span class="layout-nav-label">{{ item.label }}</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+    </ul>
+
+    <ul class="layout-nav layout-nav--footer">
+      <li>
+        <button type="button" class="layout-nav-link layout-nav-link--logout" (click)="logout()">
+          <i class="bx bx-log-out layout-nav-icon"></i>
+          <span class="layout-nav-label" *ngIf="showLabels()">Cerrar sesión</span>
+        </button>
+      </li>
+    </ul>
+  </div>
+</aside>
+
+<main
+  class="layout-main"
+  [class.layout-main--collapsed]="isSidebarCollapsed()"
+  [class.layout-main--expanded]="!isSidebarCollapsed()"
+>
+  <div class="layout-content">
+    <router-outlet></router-outlet>
+  </div>
+</main>

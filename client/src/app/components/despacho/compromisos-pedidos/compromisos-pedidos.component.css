@@ -1,0 +1,61 @@
+.log-mensaje {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-resultado {
+  font-weight: 600;
+}
+
+.log-resultado[data-resultado="enviado"] {
+  color: #166534;
+}
+
+.log-resultado[data-resultado="error"],
+.log-resultado[data-resultado="validacion"] {
+  color: #b91c1c;
+}
+
+.log-resultado[data-resultado="omitido"] {
+  color: #a16207;
+}
+
+.cargues-tabla tbody tr.is-open {
+  background: #dbeafe;
+}
+
+.log-detalle {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #bfdbfe;
+  background: #f8fbff;
+}
+
+.log-detalle-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.log-detalle-msg {
+  margin: 0 0 12px;
+}
+
+.log-detalle h3 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 16px 0 8px;
+}
+
+.log-errores {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.log-errores li {
+  margin-bottom: 4px;
+}

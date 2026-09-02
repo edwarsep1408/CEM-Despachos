@@ -1,0 +1,107 @@
+table {
+  width: 100%;
+}
+
+.content-ilustration {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.ilustration {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  margin-right: 10px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px;
+  border: solid 1px var(--color-neutral-n30);
+  background-color: #9da1af;
+  color: white;
+}
+
+.content-title {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.input-search {
+  width: 40%;
+  border-radius: 10px;
+  border: 1px solid #dee2e6;
+}
+
+.search-icon {
+  background-color: #0000;
+  border: none;
+}
+
+.search-input {
+  border-radius: 10px;
+  border: none;
+}
+
+.btn-delete:hover {
+  color: #c50000;
+}
+
+.offcanvas-header {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.offcanvas-body {
+  padding-bottom: 24vh;
+}
+
+.offcanvas-footer {
+  padding: 1rem 1rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.offcanvas-bascula-prueba {
+  width: min(36rem, 100vw);
+}
+
+.bascula-peso {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.bascula-peso-valor {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.bascula-log {
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  padding: 12px;
+  border-radius: 8px;
+  min-height: 280px;
+  max-height: calc(100vh - 280px);
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.badge {
+  font-weight: 500;
+}
+
+@media screen and (max-width: 600px) {
+  .input-search {
+    width: 100%;
+  }
+}

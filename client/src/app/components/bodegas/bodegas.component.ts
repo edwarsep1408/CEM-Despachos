@@ -32,7 +32,8 @@ export interface PeriodicElement {
 export class BodegasComponent implements OnInit {
 
   displayedColumns: string[] = ['nombre', 'codigo', 'ubicacion', 'acciones'];
-  dataSource: MatTableDataSource<PeriodicElement> = new MatTableDataSource<PeriodicElement>();;
+  dataSource: MatTableDataSource<PeriodicElement> = new MatTableDataSource<PeriodicElement>();
+  cargando = false;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -57,12 +58,15 @@ export class BodegasComponent implements OnInit {
   }
 
   OnGet() {
+    this.cargando = true;
     this._bodegasService.Get().subscribe(
       (response) => {
-        console.log(response)
+        this.cargando = false;
         this.dataSource.data = response.body as PeriodicElement[];
+        if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
       },
       (error) => {
+        this.cargando = false;
         var errorMessage = <any>error;
 
         if (errorMessage != null) {

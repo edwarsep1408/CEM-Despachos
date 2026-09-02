@@ -3,13 +3,16 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSort, SortDirection } from '@angular/material/sort';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 
 /* SERVICES */
 import { ItemsService } from "../../services/items/items.service";
+import { TarasEmpaquesService } from "../../services/despacho/taras-empaques.service";
 import { MaterialModule } from '../../material.module'
 
 export interface PeriodicElement {
+  _id?: string;
   nombre: string;
   item: string;
   codigoItem: string;
@@ -20,12 +23,19 @@ export interface PeriodicElement {
   undInventario: string
   undAdicional: string
   linea: string
+  vidaUtilEtiqueta?: string
+  vidaUtilMeses?: number
+  vidaUtilDias?: number
+  unidadesEmpaque?: number
+  unidadesEmpaqueMax?: number
+  taraNombre?: string
+  estadoFrio?: string
 }
 
 @Component({
   selector: 'app-items',
   standalone: true,
-  imports: [MaterialModule, CommonModule],
+  imports: [MaterialModule, CommonModule, FormsModule],
   templateUrl: './items.component.html',
   styleUrl: './items.component.css'
 })
@@ -42,17 +52,36 @@ export class ItemsComponent implements OnInit {
     'idTipoinventario',
     'undInventario',
     'undAdicional',
-    'estado'
+    'vidaUtilEtiqueta',
+    'taraNombre',
+    'unidadesEmpaque',
+    'estadoFrio',
+    'estado',
+    'acciones'
   ];
   dataSource: MatTableDataSource<PeriodicElement> = new MatTableDataSource<PeriodicElement>();;
   ultimaSincronizacion: any = [];
+  taras: { nombre: string }[] = [];
+  editForm = {
+    _id: "",
+    referencia: "",
+    descripcion: "",
+    taraNombre: "",
+    unidadesEmpaque: 0 as number | null,
+    unidadesEmpaqueMax: 0 as number | null,
+    vidaUtilMeses: 0 as number | null,
+    vidaUtilDias: 0 as number | null,
+  };
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
   unidadesMedida: any = []
 
 
-  constructor(private _itemsService: ItemsService) {
+  constructor(
+    private _itemsService: ItemsService,
+    private tarasApi: TarasEmpaquesService
+  ) {
 
   }
 
@@ -61,6 +90,7 @@ export class ItemsComponent implements OnInit {
     this.dataSource.sort = this.sort;
     this.OnGet()
     this.onInformacionUltimaSincronizacion();
+    this.cargarTaras();
   }
 
 
@@ -234,6 +264,7 @@ export class ItemsComponent implements OnInit {
           this.onInformacionUltimaSincronizacion();
           this.cargando = false;
         } else {
+          this.cargando = false;
           Swal.fire({
             title: "Sincronización con problemas",
             text: "La sincronización no se pudo completar, por favor intente nuevamente",
@@ -241,7 +272,17 @@ export class ItemsComponent implements OnInit {
           });
         }
       },
-      error: (error) => { console.error(error) }
+      error: (error) => {
+        console.error(error);
+        this.cargando = false;
+        Swal.fire({
+          title: "No se pudieron sincronizar los ítems",
+          text:
+            error?.error?.body?.message ||
+            "SIESA/Connekta no respondió. Revise la consulta carnicosyalimentos_GET_ITEMS.",
+          icon: "error",
+        });
+      }
     });
   }
 
@@ -257,9 +298,64 @@ export class ItemsComponent implements OnInit {
         }
         
       },
-      error: (error) => { console.error(error) }
+      error: (error) => {
+        console.error(error);
+      }
     });
 
+  }
+
+  cargarTaras() {
+    this.tarasApi.Get().subscribe({
+      next: (res) => {
+        this.taras = (res?.body || []).filter((t: any) => t.activo !== false);
+      },
+      error: () => {
+        this.taras = [];
+      },
+    });
+  }
+
+  taraEnCatalogo(nombre: string) {
+    return this.taras.some((t) => t.nombre === nombre);
+  }
+
+  onClickDato(element: PeriodicElement) {
+    this.editForm = {
+      _id: element._id || "",
+      referencia: element.referencia || "",
+      descripcion: (element as any).descripcion || element.nombre || "",
+      taraNombre: element.taraNombre || "",
+      unidadesEmpaque: Number(element.unidadesEmpaque) || 0,
+      unidadesEmpaqueMax: Number(element.unidadesEmpaqueMax) || Number(element.unidadesEmpaque) || 0,
+      vidaUtilMeses: Number(element.vidaUtilMeses) || 0,
+      vidaUtilDias: Number(element.vidaUtilDias) || 0,
+    };
+  }
+
+  onUpdate() {
+    this._itemsService.Put(this.editForm).subscribe({
+      next: () => {
+        const closeCanvas = document.querySelector("[data-bs-dismiss-edit='true']") as HTMLElement | null;
+        closeCanvas?.click();
+        Swal.fire({
+          toast: true,
+          position: "top",
+          icon: "success",
+          title: "Logística del ítem guardada. La sincronización de SIESA no la va a pisar.",
+          showConfirmButton: false,
+          timer: 3200,
+        });
+        this.OnGet();
+      },
+      error: (error) => {
+        Swal.fire({
+          icon: "error",
+          title: "No se pudo guardar",
+          text: error?.error?.body?.message || "Intente de nuevo.",
+        });
+      },
+    });
   }
 
 }

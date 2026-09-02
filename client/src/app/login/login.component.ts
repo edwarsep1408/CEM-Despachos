@@ -1,130 +1,118 @@
-import { Component } from '@angular/core';
-import { RouterModule, Router, ActivatedRoute, Params } from '@angular/router';
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SesionService } from '../services/sesion/sesion.service';
+import { PermisosSesion } from '../core/permisos-sesion';
+import { environment } from '../../environments/environment';
 import Swal from 'sweetalert2';
-
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [RouterModule],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
 
-  token: string = ''
-  statusSession: boolean = false
+  form: FormGroup;
+  cargando = false;
+  esLocal = !environment.production;
+  private destino(identity?: { perfil?: string; permisos?: string[]; puedeFirmar?: boolean; origen?: string }) {
+    const next = this._route.snapshot.queryParamMap.get("next") || "";
+    if (next.startsWith("/") && !next.startsWith("//") && next !== "/login") {
+      return next;
+    }
+    if (identity?.puedeFirmar && !(identity?.permisos || []).length) {
+      return "/mi-firma";
+    }
+    if (identity?.origen === "conductor" || String(identity?.perfil || "").toLowerCase() === "conductor") {
+      return "/portal-conductor";
+    }
+    const perfil = String(identity?.perfil || localStorage.getItem("perfil") || "").toLowerCase();
+    if (perfil.includes("despachador") && !perfil.includes("admin")) {
+      return "/portal-despachador";
+    }
+    return PermisosSesion.primeraRuta();
+  }
 
-  constructor(private _router: Router, private _route: ActivatedRoute, private sessionService: SesionService) {
+  constructor(
+    private _router: Router,
+    private _route: ActivatedRoute,
+    private sessionService: SesionService,
+    private fb: FormBuilder
+  ) {
+    this.form = this.fb.group({
+      usuario: ['', Validators.required],
+      password: ['', Validators.required],
+    });
+  }
 
+  ngOnInit(): void {
+    this.sessionService.cerrarSesion();
 
-    this._route.queryParamMap.subscribe(params => {
-      const tokenVal = params.get('auth') || '';
+    const ssoToken = this._route.snapshot.queryParamMap.get('auth');
+    if (ssoToken) {
+      this.validarSso(ssoToken);
+    }
+  }
 
-      if (tokenVal) {
-        this.token = tokenVal;
-      } else {
+  onSubmit(): void {
+    if (this.form.invalid || this.cargando) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.cargando = true;
+    this.form.disable();
+    const { usuario, password } = this.form.getRawValue();
+
+    this.sessionService.loginLocal(usuario, password).subscribe({
+      next: (response) => {
+        this.sessionService.guardarSesion(response.token, response.identity);
+        this._router.navigate([this.destino(response.identity)]);
+      },
+      error: (error) => {
+        this.cargando = false;
+        this.form.enable();
+        const message =
+          error?.error?.body?.message ||
+          (error.status === 0
+            ? 'No hay conexión con el servidor local (puerto 3020).'
+            : 'No se pudo iniciar sesión.');
+
         Swal.fire({
-
+          toast: true,
+          position: 'top',
           icon: 'error',
-          title: 'Se requiere inicio de sesion. Serás redirigido al portal de CEM.',
-          
+          title: message,
+          showConfirmButton: false,
+          timer: 4000,
         });
-
-        window.location.href = 'http://192.168.1.252:4300/login'
       }
-    })
-
-
+    });
   }
 
-  ngAfterViewInit() {
-
-    if (!localStorage.getItem('token')) {
-
-      this.OnvalidateToken();
-
-    } else {
-
-      this._router.navigate(['/configuracion/inventarioTotalCompania']);
-
-    }
-  }
-
-  async OnvalidateToken() {
-
-    const tokenLocalStorage = this.sessionService.getToken()
-
-    if (tokenLocalStorage === null) {
-
-      this.statusSession = false
-
-      if (this.token === null) {
-
-        this.statusSession = false
-        return
+  private validarSso(token: string): void {
+    this.cargando = true;
+    this.sessionService.Post(token).subscribe({
+      next: (response) => {
+        this.sessionService.guardarSesion(response.token, response.identity);
+        this._router.navigate([this.destino(response.identity)]);
+      },
+      error: () => {
+        this.cargando = false;
+        this.form.enable();
+        Swal.fire({
+          toast: true,
+          position: 'top',
+          icon: 'info',
+          title: 'El SSO no respondió. Usa el acceso local.',
+          showConfirmButton: false,
+          timer: 4000,
+        });
       }
-
-      this.sessionService.Post(this.token).subscribe({
-        next: (response) => {
-
-          this.statusSession = true;
-          localStorage.setItem('token', response.token);
-          localStorage.setItem('user', response.identity.nombre);
-          localStorage.setItem('correo', response.identity.nombre);
-          localStorage.setItem('message', '');
-
-          this._router.navigate(['/configuracion/inventarioTotalCompania']);
-
-        },
-        error:
-          (error) => {
-            var errorMessage = <any>error;
-
-            if (errorMessage != null) {
-              var body = error.error;
-
-              this.statusSession = false;
-              if (error.status == 500) {
-                const Toast = Swal.mixin({
-                  toast: true,
-                  position: 'top',
-                  showConfirmButton: false,
-                  timer: 4000,
-                  timerProgressBar: true,
-                });
-
-                Toast.fire({
-                  icon: 'error',
-                  title: body.message,
-                });
-              } else if (error.status == 0) {
-                const Toast = Swal.mixin({
-                  toast: true,
-                  position: 'top',
-                  showConfirmButton: false,
-                  timer: 4000,
-                  timerProgressBar: true,
-                });
-
-                Toast.fire({
-                  icon: 'error',
-                  title: 'Por favor compruebe su conexión de internet',
-                });
-              }
-            }
-          }
-      })
-    } else {
-
-      this._router.navigate(['/configuracion/inventarioTotalCompania']);
-
-    }
-
-    this.statusSession = true
-
+    });
   }
-
-
 }

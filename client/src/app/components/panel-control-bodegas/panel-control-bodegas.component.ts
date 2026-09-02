@@ -11,6 +11,7 @@ import { Router } from '@angular/router';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { FormsModule } from '@angular/forms';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-panel-control-bodegas',
@@ -95,46 +96,62 @@ export class PanelControlBodegasComponent {
 
   onGetInventarioXbodega() {
 
-    this._bodegaService.consultarInventarioxBodega(this.bodegaSeleccionada.codigo).subscribe((response) => {
+    this._bodegaService.consultarInventarioxBodega(this.bodegaSeleccionada.codigo).subscribe({
+      next: (response) => {
+        if (response.body) {
+          this.labelsInventary = response.body.labels;
+          this.dataInventary = response.body.data;
+          this.labelsLinea = response.body.labelsLinea;
+          this.dataLinea = response.body.dataLinea;
+          this.dataSource.data = response.body.productosSinInventario;
+          this.dataSourceInventarioConCantidades.data = response.body.productosConInventario;
 
+          const canastasFormat = this.decimalPipe.transform(
+            response.body.canastas,
+            '1.0-0'
+          );
 
-      if (response.body) {
+          const canastillasFormat = this.decimalPipe.transform(
+            response.body.canastillas,
+            '1.0-0'
+          );
 
-        this.labelsInventary = response.body.labels;
-        this.dataInventary = response.body.data;
-        this.labelsLinea = response.body.labelsLinea;
-        this.dataLinea = response.body.dataLinea;
-        this.dataSource.data = response.body.productosSinInventario;
-        this.dataSourceInventarioConCantidades.data = response.body.productosConInventario;
+          this.pesoTotal = this.decimalPipe.transform(
+            response.body.totalPeso,
+            '1.0-0'
+          );
 
-        const canastasFormat = this.decimalPipe.transform(
-          response.body.canastas,
-          '1.0-0'
-        );
+          this.unidadesTotales = this.decimalPipe.transform(
+            response.body.totalUnidades,
+            '1.0-0'
+          );
 
-        const canastillasFormat = this.decimalPipe.transform(
-          response.body.canastillas,
-          '1.0-0'
-        );
+          this.canastas = canastasFormat;
+          this.canastillas = canastillasFormat;
 
-        this.pesoTotal = this.decimalPipe.transform(
-          response.body.totalPeso,
-          '1.0-0'
-        );
-
-        this.unidadesTotales = this.decimalPipe.transform(
-          response.body.totalUnidades,
-          '1.0-0'
-        );
-
-        this.canastas = canastasFormat;
-        this.canastillas = canastillasFormat;
-
-        this.onCreateChart();
-        this.onCreateCharLinea();
+          this.onCreateChart();
+          this.onCreateCharLinea();
+        }
         this.cargando = false;
-
-      }
+        if (response.body?.aviso) {
+          Swal.fire({
+            title: 'Inventario sin existencias',
+            text: response.body.aviso,
+            icon: 'info',
+          });
+        }
+      },
+      error: (error) => {
+        console.error(error);
+        this.cargando = false;
+        Swal.fire({
+          title: 'No se pudo consultar el inventario',
+          text:
+            error?.error?.body?.message ||
+            'SIESA Connekta no respondió existencias por bodega.',
+          icon: 'error',
+        });
+      },
     });
   }
 
@@ -306,14 +323,16 @@ export class PanelControlBodegasComponent {
 
   onConsultarBodegas(){
 
-    this._bodegaService.onConsultarBodegas().subscribe((response)=>{
-
-      if (response.body) {
-        
-        this.bodegas = response.body;
-      }
-      
-      console.log(this.bodegas, "<- bodegas");      
+    this._bodegaService.onConsultarBodegas().subscribe({
+      next: (response) => {
+        if (response.body) {
+          this.bodegas = response.body;
+        }
+      },
+      error: (error) => {
+        console.error(error);
+        this.bodegas = [];
+      },
     });
   }
 

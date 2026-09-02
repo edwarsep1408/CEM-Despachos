@@ -1,0 +1,103 @@
+:host {
+  display: block;
+  overscroll-behavior: none;
+}
+
+.mi-firma {
+  height: 100dvh;
+  height: 100vh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px 14px calc(16px + env(safe-area-inset-bottom));
+  padding-left: max(14px, env(safe-area-inset-left));
+  padding-right: max(14px, env(safe-area-inset-right));
+  background: #f4f6fb;
+  color: #1e293b;
+}
+
+.mi-firma-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.mi-firma-kicker {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.mi-firma h1 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.mi-firma-meta {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+}
+
+.mi-firma-error {
+  color: #b91c1c;
+  margin: 12px 0;
+}
+
+.mi-firma-pad-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.mi-firma-ayuda {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.mi-firma-pad {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  height: 100%;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.mi-firma-acciones {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mi-firma-acciones .btn {
+  min-height: 46px;
+}
+
+.mi-firma-acciones .btn-link {
+  grid-column: 1 / -1;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .mi-firma {
+    padding: 8px 12px;
+  }
+
+  .mi-firma-pad {
+    min-height: 0;
+  }
+
+  .mi-firma h1 {
+    font-size: 1.1rem;
+  }
+}

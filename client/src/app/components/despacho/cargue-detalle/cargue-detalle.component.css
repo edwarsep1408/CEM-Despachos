@@ -1,0 +1,154 @@
+.cargue-top {
+  margin-bottom: 8px;
+}
+
+.cargue-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.cargue-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+.cargues-tabla thead {
+  background: #93c5fd;
+}
+
+.cargues-tabla th {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.cargues-tabla tbody tr:nth-child(even) {
+  background: #eff6ff;
+}
+
+.cargue-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.cargue-panel-card {
+  width: min(1280px, 96vw);
+  height: min(820px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+}
+
+.cargue-panel-head,
+.cargue-panel-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  flex-shrink: 0;
+}
+
+.cargue-panel-head {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cargue-panel-foot {
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.cargue-panel-filtros {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 8px 12px;
+  padding: 12px 16px 0;
+  flex-shrink: 0;
+}
+
+.cargue-panel-filtros label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #4b5563;
+  margin: 0;
+}
+
+.cargue-panel-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  flex-shrink: 0;
+  font-size: 0.9rem;
+}
+
+.cargue-panel-lista {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.cargue-picker {
+  min-width: 980px;
+}
+
+.cargues-tabla .celda-obs,
+.cargue-picker .celda-obs {
+  max-width: 280px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.cargue-picker thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #93c5fd;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cargue-picker td {
+  font-size: 0.8rem;
+  vertical-align: top;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cargue-picker tbody tr {
+  cursor: pointer;
+}
+
+.cargue-picker tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.cargue-picker tbody tr:hover {
+  background: #dbeafe;
+}
+
+.cargue-picker tbody tr.is-selected {
+  background: #bfdbfe;
+}

@@ -1,0 +1,34 @@
+<div class="mi-firma">
+  <header class="mi-firma-bar">
+    <div>
+      <p class="mi-firma-kicker">Certificado de calidad</p>
+      <h1>Mi firma</h1>
+      <p class="mi-firma-meta" *ngIf="nombre">{{ nombre }}<span *ngIf="cargo"> · {{ cargo }}</span></p>
+    </div>
+    <button type="button" class="btn btn-outline-secondary btn-sm" (click)="salir()">Salir</button>
+  </header>
+
+  <p class="mi-firma-error" *ngIf="error">{{ error }}</p>
+  <p class="text-muted" *ngIf="cargando">Cargando…</p>
+
+  <section class="mi-firma-pad-wrap" *ngIf="!error && !cargando">
+    <p class="mi-firma-ayuda">Gire el celular de lado y firme con el dedo. Se guarda una vez para el certificado.</p>
+    <canvas
+      #pad
+      class="mi-firma-pad"
+      (pointerdown)="empezar($event)"
+      (pointermove)="mover($event)"
+      (pointerup)="terminar()"
+      (pointercancel)="terminar()"
+      (pointerleave)="terminar()"
+    ></canvas>
+  </section>
+
+  <footer class="mi-firma-acciones" *ngIf="!error && !cargando">
+    <button type="button" class="btn btn-outline-secondary" (click)="borrar()">Borrar</button>
+    <button type="button" class="btn btn-primary" (click)="guardar()" [disabled]="guardando">
+      {{ guardando ? "Guardando…" : "Guardar firma" }}
+    </button>
+    <button type="button" class="btn btn-link" (click)="volver()">Volver</button>
+  </footer>
+</div>

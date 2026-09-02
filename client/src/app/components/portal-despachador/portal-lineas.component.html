@@ -1,0 +1,82 @@
+<div class="piso" *ngIf="!cargando && doc">
+  <a class="nav" *ngIf="!docCerrado" (click)="finalizar()">Finalizar (f)</a>
+  <a class="nav" *ngIf="docCerrado" (click)="repesarDocumento()">Repesar (r)</a>
+  <a class="nav" *ngIf="listoParaEtiquetas" (click)="imprimirEtiquetas()">Etiquetas{{ canastas ? " " + canastas : "" }} (e)</a>
+  <a class="nav" (click)="volver()">Volver (F10)</a>
+  <app-piso-brand></app-piso-brand>
+  <h1>DESPACHO</h1>
+  <div class="piso-meta">
+    <div><b>CARGUE:</b> {{ etiquetaCargue(doc.idCargue, doc.bodega) }}</div>
+    <div><b>PEDIDO:</b> {{ etiquetaPedido(doc) }}</div>
+    <div><b>VENDEDOR:</b> {{ doc.vendedor || "—" }}</div>
+    <div><b>NIT:</b> {{ doc.nit }}</div>
+    <div><b>CLIENTE:</b> {{ doc.sucursal || doc.contacto || doc.cliente }}</div>
+    <div><b>ESTABLECIMIENTO:</b> {{ doc.establecimiento || doc.cliente }}</div>
+    <div><b>DIRECCION:</b> {{ doc.direccion }}</div>
+    <div><b>FECHA:</b> {{ doc.fecha }}</div>
+    <div><b>HORA:</b> {{ doc.hora }}</div>
+    <div><b>OBSERVACION:</b> {{ doc.observacion }}</div>
+    <div *ngIf="listoParaEtiquetas"><b>CANASTAS:</b> {{ canastas || "—" }}</div>
+  </div>
+
+  <table *ngIf="lineas.length">
+    <thead>
+      <tr>
+        <th></th>
+        <th></th>
+        <th>ID</th>
+        <th>OC</th>
+        <th>COD</th>
+        <th>PRODUCTO</th>
+        <th>ESTADO</th>
+        <th>PEDIDO EN</th>
+        <th>UNIDADES PEDIDAS</th>
+        <th>KILOS PEDIDOS</th>
+        <th>UNIDADES DESPACHADAS</th>
+        <th>KILOS DESPACHADOS</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let row of lineas; let i = index"
+        [class.sel]="i === sel"
+        [class.omit]="row.omitido"
+        (click)="sel = i"
+        (dblclick)="pesar(row)"
+      >
+        <td>
+          <button type="button" class="btn-piso" [disabled]="row.omitido || docCerrado" (click)="pesar(row); $event.stopPropagation()">
+            pesar
+          </button>
+        </td>
+        <td>
+          <button type="button" class="btn-piso" [disabled]="row.omitido || docCerrado" (click)="omitir(row, $event)">omitir</button>
+          <button
+            type="button"
+            class="btn-piso"
+            *ngIf="puedeRepesarLinea(row)"
+            (click)="repesarLinea(row, $event)"
+          >
+            [repesar]
+          </button>
+        </td>
+        <td>{{ row.idLinea }}</td>
+        <td>{{ row.oc }}</td>
+        <td>{{ row.codigo }}</td>
+        <td>{{ row.producto }}</td>
+        <td>{{ row.estadoDespacho }}</td>
+        <td>
+          <span class="piso-pedido-en" [attr.data-um]="pedidoEnDe(row)">{{ pedidoEnDe(row) }}</span>
+        </td>
+        <td>{{ row.unidades }}</td>
+        <td>{{ row.pesoPedido | number : "1.1-2" }}</td>
+        <td>{{ row.cd }}</td>
+        <td>{{ (row.pd || 0) | number : "1.1-2" }}</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="vacio" *ngIf="!lineas.length">Este documento no tiene productos.</p>
+</div>
+<p class="piso vacio" *ngIf="cargando">Cargando…</p>
+<p class="piso vacio" *ngIf="!cargando && error">{{ error }}</p>
+<p class="piso vacio" *ngIf="!cargando && !error && !doc">No se encontró el documento.</p>

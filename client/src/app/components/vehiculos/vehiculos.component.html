@@ -1,0 +1,146 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bxs-truck page-banner-icon"></i>
+    <div>
+      <h1>Vehiculos</h1>
+      <p>Placa, conductor, capacidad en toneladas y clave del portal de entregas.</p>
+    </div>
+  </div>
+</div>
+
+<div class="despacho-modulo despacho-modulo--wide">
+  <div class="cargues-acciones">
+    <button type="button" class="cargues-link" (click)="abrirNuevo()">Agregar</button>
+  </div>
+
+  <div class="hojas-filtros">
+    <label>conductor
+      <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.conductor" />
+    </label>
+    <label>placa
+      <input type="text" class="form-control form-control-sm text-uppercase" [(ngModel)]="filtros.placa" />
+    </label>
+  </div>
+
+  <div class="hojas-toolbar">
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="pendiente('Imprimir (PDF)')">Imprimir (PDF)</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="pendiente('Exportar a excel')">Exportar a excel</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="pendiente('DATOS')">DATOS</button>
+    <select class="form-select form-select-sm hoja-xsl" disabled>
+      <option>Plantillas XSL</option>
+    </select>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="detalleOculto = !detalleOculto">
+      {{ detalleOculto ? "Mostrar Detalle" : "Ocultar Detalle" }}
+    </button>
+  </div>
+
+  <div *ngIf="cargando" class="spinner-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50" color="primary"></mat-progress-spinner>
+  </div>
+
+  <div class="mat-elevation-z4" *ngIf="!cargando">
+    <table class="table table-sm mb-0 cargues-tabla">
+      <thead>
+        <tr>
+          <th></th>
+          <th>ID</th>
+          <th>CONDUCTOR</th>
+          <th *ngIf="!detalleOculto">TELEFONO</th>
+          <th>CAPACIDAD (t)</th>
+          <th>PLACA</th>
+          <th *ngIf="!detalleOculto">CLAVE PORTAL</th>
+          <th *ngIf="!detalleOculto">FLETE</th>
+          <th *ngIf="!detalleOculto">ID_CONDUCTOR</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of visibles">
+          <td class="acciones-cell">
+            <button type="button" class="btn-link-accion" (click)="abrirEditar(row)">[editar]</button>
+          </td>
+          <td>{{ row.idVehiculo }}</td>
+          <td>{{ row.conductor }}</td>
+          <td *ngIf="!detalleOculto">{{ row.telefono }}</td>
+          <td>{{ row.capacidad ? (row.capacidad | number : "1.0-2") : "0" }} t</td>
+          <td>{{ row.placa }}</td>
+          <td *ngIf="!detalleOculto">{{ row.tienePassword ? "Definida" : "Sin definir" }}</td>
+          <td *ngIf="!detalleOculto">{{ row.flete | number : "1.0-0" }}</td>
+          <td *ngIf="!detalleOculto">{{ row.idConductor }}</td>
+        </tr>
+        <tr *ngIf="!visibles.length">
+          <td [attr.colspan]="detalleOculto ? 5 : 9" class="text-muted py-3">No hay vehículos con esos filtros.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small text-muted mt-2 mb-0">Total: {{ visibles.length }} registros</p>
+</div>
+
+<div class="cargue-panel" *ngIf="panel">
+  <div class="hoja-dialog">
+    <h5>{{ panel === "editar" ? "Editar vehículo" : "Agregar vehículo" }}</h5>
+    <form (submit)="$event.preventDefault(); guardar()">
+      <div class="hoja-form-row">
+        <label for="vehiculoPlaca">PLACA</label>
+        <input id="vehiculoPlaca" type="text" class="form-control text-uppercase" [(ngModel)]="form.placa" name="placa" required />
+      </div>
+      <div class="hoja-form-row">
+        <label for="vehiculoConductor">CONDUCTOR</label>
+        <input id="vehiculoConductor" type="text" class="form-control" [(ngModel)]="form.conductor" name="conductor" />
+      </div>
+      <div class="hoja-form-row">
+        <label for="vehiculoTelefono">TELEFONO</label>
+        <input id="vehiculoTelefono" type="text" class="form-control" [(ngModel)]="form.telefono" name="telefono" />
+      </div>
+      <div class="hoja-form-row">
+        <label for="vehiculoCapacidad">CAPACIDAD (t)</label>
+        <input
+          id="vehiculoCapacidad"
+          type="number"
+          class="form-control"
+          [(ngModel)]="form.capacidad"
+          name="capacidad"
+          min="0"
+          step="0.1"
+          placeholder="Ej. 2"
+        />
+      </div>
+      <div class="hoja-form-row">
+        <label for="vehiculoFlete">FLETE</label>
+        <input id="vehiculoFlete" type="number" class="form-control" [(ngModel)]="form.flete" name="flete" min="0" step="1" />
+      </div>
+      <div class="hoja-form-row">
+        <label for="vehiculoIdConductor">ID_CONDUCTOR</label>
+        <input id="vehiculoIdConductor" type="text" class="form-control" [(ngModel)]="form.idConductor" name="idConductor" />
+      </div>
+      <div class="hoja-form-row">
+        <label for="vehiculoCelular">CELULAR PTO</label>
+        <input id="vehiculoCelular" type="text" class="form-control" [(ngModel)]="form.celularPtoContacto" name="celularPtoContacto" />
+      </div>
+      <div class="hoja-form-row">
+        <label for="vehiculoPassword">CLAVE PORTAL</label>
+        <input
+          id="vehiculoPassword"
+          type="password"
+          class="form-control"
+          [(ngModel)]="form.password"
+          name="password"
+          autocomplete="new-password"
+          [placeholder]="tienePassword ? 'Dejar vacío para no cambiar' : 'Mínimo 4 caracteres'"
+        />
+      </div>
+      <p class="small text-muted" *ngIf="panel === 'editar' && tienePassword">
+        Ya tiene clave. Escriba una nueva solo si quiere cambiarla.
+      </p>
+      <div class="hoja-form-row">
+        <label for="vehiculoTransportadora">TRANSPORTADORA</label>
+        <input id="vehiculoTransportadora" type="text" class="form-control" [(ngModel)]="form.transportadora" name="transportadora" />
+      </div>
+      <div class="hoja-dialog-acciones">
+        <button type="submit" class="btn btn-secondary btn-sm" [disabled]="!form.placa.trim() || guardando">Aceptar</button>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="cancelar()">cancelar</button>
+        <button type="button" class="btn btn-outline-danger btn-sm" *ngIf="panel === 'editar'" (click)="eliminar({ _id: editId })">Eliminar</button>
+      </div>
+    </form>
+  </div>
+</div>

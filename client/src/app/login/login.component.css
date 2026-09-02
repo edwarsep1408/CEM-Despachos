@@ -1,0 +1,46 @@
+.login-form {
+  width: 100%;
+}
+
+.login-form .form-control {
+  border-radius: 12px;
+}
+
+.login-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 8px;
+  min-height: 56px;
+  border: none;
+  border-radius: 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(90deg, #005eb8 0%, #057fde 35%);
+  transition: opacity 0.2s;
+}
+
+.login-submit:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.login-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-hint {
+  margin: 16px 0 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.login-hint a {
+  color: #005eb8;
+  font-weight: 600;
+  text-decoration: none;
+}

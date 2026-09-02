@@ -1,0 +1,89 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bx-map-alt page-banner-icon"></i>
+    <div>
+      <h1>{{ titulo }}</h1>
+      <p>Pedidos despachados cruzados con factura, para armar la ruta del vehículo.</p>
+    </div>
+  </div>
+</div>
+
+<div class="despacho-modulo despacho-modulo--wide">
+  <div class="cargues-acciones">
+    <a routerLink="/configuracion/despacho/hojas-de-ruta/nueva" class="cargues-link">Nueva_Hoja_de_Ruta</a>
+    <button type="button" class="cargues-link" [class.is-active]="vista === 'temporal'" (click)="cambiarVista('temporal')">
+      Temporales
+    </button>
+    <button type="button" class="cargues-link" [class.is-active]="vista === 'anulada'" (click)="cambiarVista('anulada')">
+      Anuladas
+    </button>
+    <button type="button" class="cargues-link" *ngIf="vista !== 'vigente'" (click)="cambiarVista('vigente')">Vigentes</button>
+  </div>
+
+  <div class="hojas-filtros">
+    <label>Desde
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.desde" (ngModelChange)="cargar()" />
+    </label>
+    <label>Hasta
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.hasta" (ngModelChange)="cargar()" />
+    </label>
+    <label>nombre
+      <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.nombre" (keyup.enter)="cargar()" />
+    </label>
+    <label>placa
+      <input type="text" class="form-control form-control-sm text-uppercase" [(ngModel)]="filtros.placa" (keyup.enter)="cargar()" />
+    </label>
+    <button type="button" class="btn btn-sm btn-outline-primary align-self-end" (click)="cargar()">Filtrar</button>
+  </div>
+
+  <div class="hojas-toolbar">
+    <span>Seleccionar:</span>
+    <button type="button" class="btn-link-accion" (click)="seleccionarTodos()">Todos</button>
+    <button type="button" class="btn-link-accion" (click)="seleccionarNinguno()">Ninguno</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="exportarPdf()">Exportar_a_pdf</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="consolidar()">XML</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="consolidar()">Consolidar_Seleccionadas</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="consolidar()">Consolidar_todo</button>
+  </div>
+
+  <div *ngIf="cargando" class="spinner-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50" color="primary"></mat-progress-spinner>
+  </div>
+
+  <div class="mat-elevation-z4" *ngIf="!cargando">
+    <table class="table table-sm mb-0 cargues-tabla">
+      <thead>
+        <tr>
+          <th></th>
+          <th>ID</th>
+          <th>FECHA</th>
+          <th>USUARIO</th>
+          <th>NOMBRE</th>
+          <th>PLACA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of filas">
+          <td class="acciones-cell">
+            <button type="button" class="btn-link-accion" (click)="ver(row)">[ver]</button>
+            <button type="button" class="btn-link-accion" (click)="certCalidad(row)">[cert calidad]</button>
+            <button type="button" class="btn-link-accion" (click)="listaPesos(row)">[lista de pesos]</button>
+            <input type="checkbox" [checked]="seleccion.has(row._id)" (change)="toggle(row._id, $any($event.target).checked)" />
+            <button type="button" class="btn-link-accion" *ngIf="vista !== 'anulada'" (click)="anular(row)">[anular]</button>
+          </td>
+          <td>{{ row.idHoja }}</td>
+          <td>{{ row.fecha }}</td>
+          <td>{{ row.usuario }}</td>
+          <td>{{ row.nombre }}</td>
+          <td>{{ row.placa }}</td>
+        </tr>
+        <tr *ngIf="!filas.length">
+          <td colspan="6" class="text-muted py-3">
+            No hay hojas {{ vista === "temporal" ? "temporales" : vista === "anulada" ? "anuladas" : "vigentes" }} con esos filtros.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small text-muted mt-2 mb-0">Total: {{ filas.length }} registros</p>
+</div>

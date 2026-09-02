@@ -2,6 +2,7 @@
 
   <div class="col-mb-6">
     <h3>Bodegas</h3>
+    <p class="text-muted small mb-0">Catálogo de bodegas SIESA para despacho e inventario.</p>
   </div>
 
   <div class=" col-mb-6 d-grid gap-2 d-md-flex justify-content-md-end">
@@ -16,6 +17,8 @@
       aria-controls="offcanvasRight"> <i class="ri-add-circle-fill"></i> Nueva Bodega</button>
   </div>
 </div>
+
+<p class="text-muted small px-1" *ngIf="cargando">Consultando bodegas en SIESA…</p>
 
 <div class="mat-elevation-z4">
   <table mat-table [dataSource]="dataSource" matSort>
@@ -90,7 +93,6 @@
           placeholder="Ubicación" autocomplete="off" required>
         <label for="floatingInput">Ubicación</label>
       </div>
-
     </div>
     <div class="offcanvas-footer">
       <div class="d-grid gap-2 d-md-flex justify-content-md-end">

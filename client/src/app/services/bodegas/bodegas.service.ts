@@ -47,6 +47,10 @@ export class BodegasService {
     return this.http.get<any>(`${this.url}/inventarioTotalcompania`);
   }
 
+  consultarInventarioTransito(){
+    return this.http.get<any>(`${this.url}/inventarioTransito`);
+  }
+
   onConsultarBodegas(){
 
     return this.http.get<any>(`${this.url}/get-bodegas-inventario`);

@@ -1,0 +1,33 @@
+.cargues-acciones {
+  margin-bottom: 12px;
+  display: flex;
+  gap: 16px;
+}
+
+.cargues-link {
+  color: #1d4ed8;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.cargues-link.is-active {
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.cargues-tabla thead {
+  background: #93c5fd;
+}
+
+.cargues-tabla th {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.cargues-tabla tbody tr:nth-child(even) {
+  background: #eff6ff;
+}

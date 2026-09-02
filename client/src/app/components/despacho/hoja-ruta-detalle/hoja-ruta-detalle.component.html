@@ -1,0 +1,377 @@
+<div *ngIf="cargando" class="spinner-container">
+  <mat-progress-spinner mode="indeterminate" diameter="50" color="primary"></mat-progress-spinner>
+</div>
+
+<div class="hoja-detalle" *ngIf="!cargando && hoja">
+  <div class="hoja-detalle-top">
+    <div class="cargue-links">
+      <button type="button" class="btn-link-accion" *ngIf="editable" (click)="abrirVehiculo()">Cambiar_vehiculo</button>
+      <button type="button" class="btn-link-accion" *ngIf="editable" (click)="abrirDatos()">Editar_Datos</button>
+      <button type="button" class="btn-link-accion" (click)="guardar()" [disabled]="guardando">Guardar</button>
+      <a routerLink="/configuracion/despacho/hojas-de-ruta" class="btn-link-accion">Volver</a>
+    </div>
+    <h1 class="hoja-detalle-titulo">{{ titulo }}</h1>
+  </div>
+
+  <dl class="hoja-meta">
+    <div><dt>ID_RUTA:</dt><dd>{{ dato(hoja.idHoja) }}</dd></div>
+    <div><dt>NOMBRE_RUTA:</dt><dd>{{ dato(hoja.nombre) }}</dd></div>
+    <div><dt>FECHA:</dt><dd>{{ dato(hoja.fecha) }}</dd></div>
+    <div><dt>CONDUCTOR:</dt><dd>{{ dato(hoja.conductor) }}</dd></div>
+    <div><dt>PLACA:</dt><dd>{{ dato(hoja.placa) }}</dd></div>
+    <div><dt>TELEFONO:</dt><dd>{{ dato(hoja.telefono) }}</dd></div>
+    <div><dt>CAPACIDAD:</dt><dd>{{ hoja.capacidad ? (hoja.capacidad | number : "1.0-2") + " t" : "—" }}</dd></div>
+    <div>
+      <dt>USO:</dt>
+      <dd>
+        {{ usoTexto }}
+        <div class="hoja-uso" *ngIf="hoja.capacidadKg > 0">
+          <div class="hoja-uso-bar" [style.width.%]="usoAncho" [attr.data-exceso]="hoja.usoPorcentaje > 100"></div>
+        </div>
+      </dd>
+    </div>
+    <div><dt>TEMPERATURA:</dt><dd>{{ dato(hoja.temperatura) }}</dd></div>
+    <div><dt>CANASTA:</dt><dd>{{ dato(hoja.canastas) }}</dd></div>
+    <div><dt>BULTOS:</dt><dd>{{ dato(hoja.bultos) }}</dd></div>
+    <div><dt>AUXILIAR:</dt><dd>{{ dato(hoja.auxiliar) }}</dd></div>
+    <div><dt>FIRMA CALIDAD:</dt><dd>{{ dato(hoja.firmanteCalidad?.nombre) }}</dd></div>
+    <div><dt>FIRMA LOGÍSTICA:</dt><dd>{{ dato(hoja.firmanteLogistica?.nombre) }}</dd></div>
+    <div><dt>CELULAR_PTO_CONTACTO:</dt><dd>{{ dato(hoja.celularPtoContacto) }}</dd></div>
+    <div><dt>TRANSPORTADORA:</dt><dd>{{ dato(hoja.transportadora) }}</dd></div>
+  </dl>
+
+  <div class="cargue-links" *ngIf="editable">
+    <button type="button" class="btn-link-accion" (click)="mostrarAgregar('facturas')">Agregar_facturas</button>
+    <button type="button" class="btn-link-accion" (click)="pendiente('Agregar_Salidas')">Agregar_Salidas</button>
+    <button type="button" class="btn-link-accion" (click)="pendiente('Agregar_transferencias')">Agregar_transferencias</button>
+    <button type="button" class="btn-link-accion" (click)="mostrarAgregar('cargue')">Agregar_cargue</button>
+    <button type="button" class="btn-link-accion" (click)="pendiente('Ordenar')">Ordenar</button>
+  </div>
+
+  <div class="hoja-toolbar">
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="imprimirPdf()">Imprimir (PDF)</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="imprimirCertificados()">Cert. calidad</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="pendiente('Exportar a excel')">Exportar a excel</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="pendiente('DATOS')">DATOS</button>
+    <select class="form-select form-select-sm hoja-xsl" disabled>
+      <option>Plantillas XSL</option>
+    </select>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="detalleOculto = !detalleOculto">
+      {{ detalleOculto ? "Mostrar Detalle" : "Ocultar Detalle" }}
+    </button>
+    <span>Seleccionar:</span>
+    <button type="button" class="btn-link-accion" (click)="seleccionarTodos()">Todos</button>
+    <button type="button" class="btn-link-accion" (click)="seleccionarNinguno()">Ninguno</button>
+  </div>
+
+  <div class="table-scroll mat-elevation-z4">
+    <table class="table table-sm mb-0 cargues-tabla">
+      <thead>
+        <tr>
+          <th>
+            <button type="button" class="btn-link-accion" *ngIf="editable" (click)="eliminarSeleccion()">Eliminar</button>
+          </th>
+          <th>PEDIDO</th>
+          <th>TIPO_DOC</th>
+          <th>FACTURA</th>
+          <th>CLIENTE</th>
+          <th>SUCURSAL</th>
+          <th *ngIf="!detalleOculto">BARRIO</th>
+          <th>MUNICIPIO</th>
+          <th *ngIf="!detalleOculto">CND_PAGO</th>
+          <th>VALOR</th>
+          <th>PESO DET_TARA</th>
+          <th>DESTARE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let doc of documentos">
+          <td>
+            <input
+              type="checkbox"
+              [checked]="seleccion.has(doc._id)"
+              (change)="toggleDoc(doc._id, $any($event.target).checked)"
+            />
+          </td>
+          <td>{{ etiquetaPedido(doc) }}</td>
+          <td>{{ doc.tipoDoc || "FACTURA" }}</td>
+          <td>{{ doc.nroFactura }}</td>
+          <td>{{ doc.cliente }}</td>
+          <td>{{ doc.sucursal }}</td>
+          <td *ngIf="!detalleOculto">{{ doc.barrio }}</td>
+          <td>{{ doc.municipio }}</td>
+          <td *ngIf="!detalleOculto">{{ doc.cndPago }}</td>
+          <td>{{ doc.valor | number : "1.2-2" }}</td>
+          <td>{{ (doc.pesoDetTara ?? doc.peso) | number : "1.2-2" }}</td>
+          <td>{{ doc.destare | number : "1.2-2" }}</td>
+        </tr>
+        <tr *ngIf="!documentos.length">
+          <td [attr.colspan]="detalleOculto ? 10 : 12" class="text-muted py-3">
+            Sin documentos. Agregue facturas o un cargue ya enviado.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="hoja-totales">
+    Total (valor) = {{ (hoja.totalValor || 0) | number : "1.2-2" }}<br />
+    Total (peso) = {{ (hoja.totalPeso || 0) | number : "1.2-2" }} kg<br />
+    Total (destare) = {{ (hoja.totalDestare || 0) | number : "1.2-2" }} kg<br />
+    Peso cargado = {{ (hoja.pesoCargado || 0) | number : "1.2-2" }} kg
+    <ng-container *ngIf="hoja.capacidadKg"> / {{ hoja.capacidadKg | number : "1.0-0" }} kg ({{ hoja.usoPorcentaje | number : "1.0-1" }}%)</ng-container>
+  </p>
+</div>
+
+<div class="cargue-panel" *ngIf="panelFacturas">
+  <div class="cargue-panel-card">
+    <div class="cargue-panel-head">
+      <div>
+        <h5 class="mb-1">Agregar facturas a la ruta {{ hoja?.nombre }}</h5>
+        <p class="small text-muted mb-0" *ngIf="avisoFacturas">{{ avisoFacturas }}</p>
+      </div>
+      <button type="button" class="btn-close" (click)="panelFacturas = false"></button>
+    </div>
+    <div class="cargue-panel-filtros hoja-facturas-filtros">
+      <label>Desde
+        <input type="date" class="form-control form-control-sm" [(ngModel)]="filtrosFacturas.desde" />
+      </label>
+      <label>Hasta
+        <input type="date" class="form-control form-control-sm" [(ngModel)]="filtrosFacturas.hasta" />
+      </label>
+      <label>nit
+        <input type="text" class="form-control form-control-sm" [(ngModel)]="filtrosFacturas.nit" />
+      </label>
+      <label>razon_social
+        <input type="text" class="form-control form-control-sm" [(ngModel)]="filtrosFacturas.razon_social" />
+      </label>
+      <label>contacto
+        <input type="text" class="form-control form-control-sm" [(ngModel)]="filtrosFacturas.contacto" />
+      </label>
+      <label>barrio
+        <input type="text" class="form-control form-control-sm" [(ngModel)]="filtrosFacturas.barrio" />
+      </label>
+      <label>municipio
+        <input type="text" class="form-control form-control-sm" [(ngModel)]="filtrosFacturas.municipio" />
+      </label>
+      <label>num_factura
+        <input type="text" class="form-control form-control-sm" [(ngModel)]="filtrosFacturas.num_factura" />
+      </label>
+      <label>Tipo Documento
+        <select class="form-select form-select-sm" [(ngModel)]="filtrosFacturas.tipo_doc">
+          <option value="">Predet</option>
+          <option *ngFor="let item of tiposFactura" [value]="item">{{ item }}</option>
+        </select>
+      </label>
+      <label>Bodega
+        <select class="form-select form-select-sm" [(ngModel)]="filtrosFacturas.bodega">
+          <option value="">Predet</option>
+          <option *ngFor="let item of bodegasFactura" [value]="item">{{ item }}</option>
+        </select>
+      </label>
+      <label>Vendedor
+        <select class="form-select form-select-sm" [(ngModel)]="filtrosFacturas.vendedor">
+          <option value="">Predet</option>
+          <option *ngFor="let item of vendedoresFactura" [value]="item">{{ item }}</option>
+        </select>
+      </label>
+    </div>
+    <div class="cargue-panel-acciones">
+      <button type="button" class="btn btn-primary btn-sm" (click)="agregarFacturasMarcadas()">Agregar</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cargarFacturas(true)">Actualizar SIESA</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="imprimirPdf()">Imprimir (PDF)</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="pendiente('Exportar a excel')">Exportar a excel</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="pendiente('DATOS')">DATOS</button>
+      <select class="form-select form-select-sm hoja-xsl" disabled>
+        <option>Plantillas XSL</option>
+      </select>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="detalleFacturasOculto = !detalleFacturasOculto">
+        {{ detalleFacturasOculto ? "Mostrar Detalle" : "Ocultar Detalle" }}
+      </button>
+      <span>Seleccionar:</span>
+      <button type="button" class="btn-link-accion" (click)="seleccionarFacturasTodas()">Todos</button>
+      <button type="button" class="btn-link-accion" (click)="seleccionarFacturasNinguna()">Ninguno</button>
+    </div>
+    <div *ngIf="cargandoFacturas" class="text-muted small py-4 px-3">
+      Consultando facturas SIESA… esta consulta suele tardar alrededor de un minuto.
+    </div>
+    <div class="cargue-panel-lista" *ngIf="!cargandoFacturas">
+      <table class="table table-sm mb-0 cargue-picker">
+        <thead>
+          <tr>
+            <th></th>
+            <th>ID</th>
+            <th>NRO_DOC</th>
+            <th>TIPO_DOC</th>
+            <th>NUM_FACTURA</th>
+            <th>NIT</th>
+            <th>RAZON_SOCIAL</th>
+            <th *ngIf="!detalleFacturasOculto">CONTACTO</th>
+            <th *ngIf="!detalleFacturasOculto">BARRIO</th>
+            <th>MUNICIPIO</th>
+            <th>FECHA</th>
+            <th>VALOR</th>
+            <th>PESO</th>
+            <th>BODEGA</th>
+            <th>VENDEDOR</th>
+            <th *ngIf="!detalleFacturasOculto">SEP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let item of facturasFiltradas"
+            [class.is-selected]="seleccionFacturas.has(item.numFactura)"
+            (click)="toggleFactura(item.numFactura)"
+          >
+            <td (click)="$event.stopPropagation()">
+              <input type="checkbox" [checked]="seleccionFacturas.has(item.numFactura)" (change)="toggleFactura(item.numFactura)" />
+            </td>
+            <td>{{ item.id461 }}</td>
+            <td>{{ item.nroDoc || 0 }}</td>
+            <td>{{ item.tipoDocPedido || item.tipoDoc }}</td>
+            <td>{{ item.numFactura }}</td>
+            <td>{{ item.nit }}</td>
+            <td>{{ item.razonSocial }}</td>
+            <td *ngIf="!detalleFacturasOculto">{{ item.contacto }}</td>
+            <td *ngIf="!detalleFacturasOculto">{{ item.barrio }}</td>
+            <td>{{ item.municipio }}</td>
+            <td>{{ item.fecha }}</td>
+            <td>{{ item.valor | number : "1.0-0" }}</td>
+            <td>{{ item.peso | number : "1.2-4" }}</td>
+            <td>{{ item.bodega }}</td>
+            <td>{{ item.vendedor }}</td>
+            <td *ngIf="!detalleFacturasOculto">{{ item.sep }}</td>
+          </tr>
+          <tr *ngIf="!facturasFiltradas.length">
+            <td [attr.colspan]="detalleFacturasOculto ? 12 : 16" class="text-muted py-3">
+              No hay facturas en caché. Pulse Actualizar SIESA (la consulta no filtra por fecha y puede tardar).
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="cargue-panel" *ngIf="panelCargue">
+  <div class="cargue-panel-card">
+    <div class="cargue-panel-head">
+      <div>
+        <h5 class="mb-1">Agregar_cargue</h5>
+        <p class="small text-muted mb-0">Pedidos de cargues enviados que aún no están en otra hoja.</p>
+      </div>
+      <button type="button" class="btn-close" (click)="panelCargue = false"></button>
+    </div>
+    <div class="cargue-panel-acciones">
+      <button type="button" class="btn btn-primary btn-sm" (click)="agregarSeleccionados()">Agregar marcados</button>
+    </div>
+    <div *ngIf="cargandoDisponibles" class="text-muted small py-4 px-3">Cargando…</div>
+    <div class="cargue-panel-lista" *ngIf="!cargandoDisponibles">
+      <table class="table table-sm mb-0 cargue-picker">
+        <thead>
+          <tr>
+            <th></th>
+            <th>PEDIDO</th>
+            <th>FACTURA</th>
+            <th>CLIENTE</th>
+            <th>CARGUE</th>
+            <th>PESO</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of disponibles" [class.is-selected]="seleccionDisponibles.has(item.pedidoIdEnc)">
+            <td>
+              <input type="checkbox" [checked]="seleccionDisponibles.has(item.pedidoIdEnc)" (change)="toggleDisponible(item.pedidoIdEnc)" />
+            </td>
+            <td>{{ etiquetaPedido(item) }}</td>
+            <td>
+              <input
+                type="text"
+                class="form-control form-control-sm"
+                [(ngModel)]="facturas[item.pedidoIdEnc]"
+                placeholder="Nro factura"
+              />
+            </td>
+            <td>{{ item.cliente }}</td>
+            <td>{{ item.idCargue }}</td>
+            <td>{{ item.peso | number : "1.2-2" }}</td>
+          </tr>
+          <tr *ngIf="!disponibles.length">
+            <td colspan="6" class="text-muted py-3">No hay pedidos despachados libres. Envíe un cargue primero.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="cargue-panel" *ngIf="panelVehiculo">
+  <div class="hoja-dialog">
+    <h5>Cambiar vehículo</h5>
+    <div class="hoja-form-row">
+      <label for="hojaPlacaNueva">VEHICULO</label>
+      <select id="hojaPlacaNueva" class="form-select" [(ngModel)]="placaNueva">
+        <option *ngFor="let item of vehiculos" [value]="item.placa">{{ etiquetaVehiculo(item) }}</option>
+      </select>
+    </div>
+    <div class="hoja-dialog-acciones">
+      <button type="button" class="btn btn-secondary btn-sm" (click)="guardarVehiculo()">Aceptar</button>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="panelVehiculo = false">cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="cargue-panel" *ngIf="panelDatos">
+  <div class="hoja-dialog">
+    <h5>Editar datos</h5>
+    <div class="hoja-form-row">
+      <label for="editNombre">NOMBRE</label>
+      <input id="editNombre" type="text" class="form-control" [(ngModel)]="editNombre" />
+    </div>
+    <div class="hoja-form-row">
+      <label for="editFecha">FECHA</label>
+      <input id="editFecha" type="date" class="form-control" [(ngModel)]="editFecha" />
+    </div>
+    <div class="hoja-form-row">
+      <label for="editPeso">PESO ADICIONAL</label>
+      <input id="editPeso" type="number" class="form-control" [(ngModel)]="editPeso" step="0.1" min="0" />
+    </div>
+    <div class="hoja-form-row">
+      <label for="editTemp">TEMPERATURA</label>
+      <input id="editTemp" type="text" class="form-control" [(ngModel)]="editTemperatura" />
+    </div>
+    <div class="hoja-form-row">
+      <label for="editCanastas">CANASTAS</label>
+      <input id="editCanastas" type="text" class="form-control" [(ngModel)]="editCanastas" />
+    </div>
+    <div class="hoja-form-row">
+      <label for="editBultos">BULTOS</label>
+      <input id="editBultos" type="text" class="form-control" [(ngModel)]="editBultos" />
+    </div>
+    <div class="hoja-form-row">
+      <label for="editAuxiliar">AUXILIAR</label>
+      <input id="editAuxiliar" type="text" class="form-control" [(ngModel)]="editAuxiliar" />
+    </div>
+    <div class="hoja-form-row">
+      <label for="editFirmaCalidad">AUX. CALIDAD</label>
+      <select id="editFirmaCalidad" class="form-select" [(ngModel)]="editFirmanteCalidadId">
+        <option value=""></option>
+        <option *ngFor="let item of firmantesCalidad" [value]="item._id">{{ item.nombre }}</option>
+      </select>
+    </div>
+    <div class="hoja-form-row">
+      <label for="editFirmaLogistica">SUP. LOGÍSTICA</label>
+      <select id="editFirmaLogistica" class="form-select" [(ngModel)]="editFirmanteLogisticaId">
+        <option value=""></option>
+        <option *ngFor="let item of firmantesLogistica" [value]="item._id">{{ item.nombre }}</option>
+      </select>
+    </div>
+    <div class="hoja-form-row">
+      <label for="editObs">OBSERVACIONES</label>
+      <input id="editObs" type="text" class="form-control" [(ngModel)]="editObservaciones" />
+    </div>
+    <div class="hoja-dialog-acciones">
+      <button type="button" class="btn btn-secondary btn-sm" (click)="guardarDatos()">Aceptar</button>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="panelDatos = false">cancelar</button>
+    </div>
+  </div>
+</div>

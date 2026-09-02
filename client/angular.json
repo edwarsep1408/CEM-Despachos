@@ -28,7 +28,7 @@
               "@angular/material/prebuilt-themes/indigo-pink.css",
               "node_modules/bootstrap/dist/css/bootstrap.min.css",
               "node_modules/bootstrap-icons/font/bootstrap-icons.min.css",
-              "src/assets/css/css-pro-layout.css",
+              "src/assets/plugins/boxicons-2.1.4/css/boxicons.min.css",
               "src/styles.css"
             ],
             "scripts": [
@@ -36,6 +36,9 @@
               "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js",
               "node_modules/chart.js/dist/chart.js",
               "node_modules/apexcharts/dist/apexcharts.min.js"
+            ],
+            "allowedCommonJsDependencies": [
+              "qrcode"
             ]
           },
           "configurations": {
@@ -70,6 +73,11 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "port": 4220,
+            "host": "0.0.0.0",
+            "disableHostCheck": true
+          },
           "configurations": {
             "production": {
               "buildTarget": "client:build:production"

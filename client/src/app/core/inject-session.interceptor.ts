@@ -6,9 +6,9 @@ import {
   HttpInterceptor,
   HttpErrorResponse
 } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { Router } from '@angular/router'
-import { map } from 'rxjs/operators';
+import { catchError } from 'rxjs/operators';
 
 @Injectable()
 export class InjectSessionInterceptor implements HttpInterceptor {
@@ -18,39 +18,33 @@ export class InjectSessionInterceptor implements HttpInterceptor {
   ) { }
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    const isAuthRequest =
+      request.url.includes('/post-login-local') ||
+      request.url.includes('/post-login-conductor') ||
+      request.url.includes('/post-validar-sesion');
 
-    try {
-
-      let newRequest = request
-
-      const token = localStorage.getItem('token');
-
-      newRequest = request.clone(
-        {
-          setHeaders: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      )
-
-      return next.handle(newRequest).pipe(map(event => {
-
-        if (event instanceof HttpErrorResponse) {
-          if (event['status'] === 403) {
-            localStorage.removeItem('token');
-            localStorage.clear();
-            this._router.navigate(['/']);
-          }
-        }
-
-        return event;
-      }))
-
-    }
-
-    catch (e) {
-      console.log('error', e)
+    if (isAuthRequest) {
       return next.handle(request);
     }
+
+    const token = localStorage.getItem('token');
+    const newRequest = token
+      ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+      : request;
+
+    return next.handle(newRequest).pipe(
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 403 || error.status === 401) {
+          const origen = localStorage.getItem("origen");
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          const url = this._router.url || "";
+          const conductor =
+            origen === "conductor" || url.includes("portal-conductor") || url.includes("login-conductor");
+          this._router.navigate([conductor ? "/login-conductor" : "/login"]);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 }

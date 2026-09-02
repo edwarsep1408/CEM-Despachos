@@ -2,6 +2,7 @@ import mesaModel from '../models/mesa.models'
 import planillaModel from '../models/planilla_mesa.models'
 import planillaEvent from '../models/planilla_event.models'
 import conteoModel from '../models/conteo.models'
+import { detenerSiSalaVacia } from '../services/basculasTcp.servicios'
 
 const WebSockets = {}
 
@@ -91,6 +92,19 @@ WebSockets.connection = (client) => {
   client.on("latencyTest", (startTime) => {
     const responseTime = Date.now();
     global.io.emit("latencyResponse", responseTime);
+  });
+
+  client.on("bascula-subscribe", (data) => {
+    const id = data?.id;
+    if (!id) return;
+    client.join(`bascula:${id}`);
+  });
+
+  client.on("bascula-unsubscribe", (data) => {
+    const id = data?.id;
+    if (!id) return;
+    client.leave(`bascula:${id}`);
+    detenerSiSalaVacia(id);
   });
 
 }

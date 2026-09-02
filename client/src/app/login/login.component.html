@@ -1,1 +1,51 @@
-<p>login works!</p>
+<div class="login-shell">
+  <div class="login-card-wrap">
+    <div class="login-logos">
+      <img src="assets/img/logotipo.webp" width="120" alt="Pollocoa" />
+    </div>
+
+    <div class="login-text">
+      <p class="login-title">¡ Bienvenido a CEM !</p>
+      <p class="login-subtitle">Logística y Distribución</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-floating mb-3">
+        <input
+          id="usuario"
+          type="text"
+          class="form-control"
+          formControlName="usuario"
+          placeholder="Usuario"
+          autocomplete="username"
+        />
+        <label for="usuario">Usuario</label>
+      </div>
+
+      <div class="form-floating mb-3">
+        <input
+          id="password"
+          type="password"
+          class="form-control"
+          formControlName="password"
+          placeholder="Contraseña"
+          autocomplete="current-password"
+        />
+        <label for="password">Contraseña</label>
+      </div>
+
+      <button class="login-submit" type="submit" [disabled]="cargando">
+        {{ cargando ? 'Ingresando…' : 'Iniciar sesión' }}
+      </button>
+    </form>
+
+    <p class="login-hint">
+      <a routerLink="/login-conductor">Entrar como conductor (placa)</a>
+    </p>
+
+    <p class="login-hint" *ngIf="esLocal">
+      Desarrollo: <strong>admin</strong> / <strong>admin</strong>
+      · despachador: <strong>despachador1</strong> / <strong>despachador1</strong>
+    </p>
+  </div>
+</div>

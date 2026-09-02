@@ -12,33 +12,13 @@ body {
 }
 
 .conten {
-  background: linear-gradient(
-    135deg,
-    #0e74da,
-    #1f94ee,
-    #98c4ff,
-    #0e74da,
-    #1f94ee
-  );
-  padding: 25px;
+  background: #f1f5f9;
+  min-height: 100vh;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  align-self: center;
-  animation: animacion 10s infinite;
-  background-size: 500%;
-}
-@keyframes animacion {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
 }
 .container-perfil {
   display: flex;

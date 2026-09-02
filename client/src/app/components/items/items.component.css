@@ -94,8 +94,14 @@ form{
   border: 1px solid #dee2e6;
 }
 
-.btn-delete:hover {
-  color: #c50000;
+.btn-edit {
+  border: none;
+  background: transparent;
+  color: #334155;
+}
+
+.btn-edit:hover {
+  color: #0d6efd;
 }
 
 .offcanvas-header {
