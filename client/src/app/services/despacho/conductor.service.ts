@@ -33,22 +33,4 @@ export class ConductorService {
   leerComprobante(foto: string): Observable<any> {
     return this.http.post(`${this.url}/post-conductor-leer-comprobante`, { foto });
   }
-
-  cerrarRuta(hojaId: string, body: any = {}): Observable<any> {
-    return this.http.post(`${this.url}/post-conductor-cerrar-ruta/${encodeURIComponent(hojaId)}`, body);
-  }
-
-  agregarConsignacion(hojaId: string, body: any): Observable<any> {
-    return this.http.post(`${this.url}/post-conductor-consignacion/${encodeURIComponent(hojaId)}`, body);
-  }
-
-  eliminarConsignacion(hojaId: string, consignacionId: string): Observable<any> {
-    return this.http.delete(
-      `${this.url}/delete-conductor-consignacion/${encodeURIComponent(hojaId)}/${encodeURIComponent(consignacionId)}`
-    );
-  }
-
-  enviarLiquidacion(hojaId: string, body: any): Observable<any> {
-    return this.http.put(`${this.url}/put-conductor-liquidacion/${encodeURIComponent(hojaId)}`, body);
-  }
 }

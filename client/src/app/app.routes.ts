@@ -61,7 +61,6 @@ import { LoginConductorComponent } from './login-conductor/login-conductor.compo
 import { PortalConductorComponent } from './components/portal-conductor/portal-conductor.component';
 import { PortalConductorHojaComponent } from './components/portal-conductor/portal-conductor-hoja.component';
 import { PortalConductorFacturaComponent } from './components/portal-conductor/portal-conductor-factura.component';
-import { CierreLiquidacionComponent } from './components/despacho/cierre-liquidacion/cierre-liquidacion.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -126,7 +125,6 @@ export const routes: Routes = [
       { path: 'despacho/hojas-de-ruta', component: HojasDeRutaComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.hojas-ruta' } },
       { path: 'despacho/hojas-de-ruta/nueva', component: HojaRutaNuevaComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.hojas-ruta' } },
       { path: 'despacho/hojas-de-ruta/:id', component: HojaRutaDetalleComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.hojas-ruta' } },
-      { path: 'despacho/cierre-liquidacion', component: CierreLiquidacionComponent, canActivate: [permissionGuard], data: { permisos: ['despacho.liquidacion', 'despacho.hojas-ruta'] } },
       { path: 'despacho/ordenes-de-compra', component: OrdenesDeCompraComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.ordenes-compra' } },
       { path: 'despacho/motivos-omision', component: MotivosOmisionComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.motivos' } },
       { path: 'despacho/taras-empaques', component: TarasEmpaquesComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.taras' } },

@@ -72,7 +72,6 @@ export class LayoutComponent implements OnInit {
         { label: 'Cargues', icon: 'bx-package', route: '/configuracion/despacho/cargues', permiso: 'despacho.cargues' },
         { label: 'Estado de cargues', icon: 'bx-bar-chart-alt-2', route: '/configuracion/despacho/estado-cargues', permisos: ['despacho.estado-cargues', 'despacho.cargues'] },
         { label: 'Hojas de ruta', icon: 'bx-map-alt', route: '/configuracion/despacho/hojas-de-ruta', permiso: 'despacho.hojas-ruta' },
-        { label: 'Cierre y liquidación', icon: 'bx-check-circle', route: '/configuracion/despacho/cierre-liquidacion', permisos: ['despacho.liquidacion', 'despacho.hojas-ruta'] },
         { label: 'Órdenes de compra', icon: 'bx-file', route: '/configuracion/despacho/ordenes-de-compra', permiso: 'despacho.ordenes-compra' },
         { label: 'Aviso de despacho', icon: 'bx-broadcast', route: '/configuracion/despacho/aviso-despacho', permiso: 'despacho.aviso' },
         { label: 'Enviar compromisos', icon: 'bx-send', route: '/configuracion/despacho/compromisos-pedidos', permiso: 'despacho.compromisos' },

@@ -118,43 +118,6 @@ const SnapshotFirmanteSchema = new Schema(
   { _id: false }
 );
 
-const CierreRutaSchema = new Schema(
-  {
-    fecha: { type: Date, default: null },
-    usuario: { type: String, default: "" },
-    observaciones: { type: String, default: "" },
-  },
-  { _id: false }
-);
-
-const LiquidacionSchema = new Schema(
-  {
-    gastosOperativos: { type: Number, default: 0 },
-    monedas: { type: Number, default: 0 },
-    observaciones: { type: String, default: "" },
-    estado: { type: String, default: "sin_liquidar" },
-    aprobadoPor: { type: String, default: "" },
-    fechaAprobacion: { type: Date, default: null },
-  },
-  { _id: false }
-);
-
-const ConsignacionSchema = new Schema(
-  {
-    banco: { type: String, default: "Bancolombia" },
-    valor: { type: Number, default: 0 },
-    referencia: { type: String, default: "" },
-    fecha: { type: String, default: "" },
-    hora: { type: String, default: "" },
-    foto: { type: String, default: "" },
-    cuenta: { type: String, default: "" },
-    usuario: { type: String, default: "" },
-    origen: { type: String, default: "conductor" },
-    fecha_creacion: { type: Date, default: Date.now },
-  },
-  { _id: true }
-);
-
 const HojaRutaSchema = new Schema({
   idHoja: { type: Number, required: true, unique: true, index: true },
   fecha: { type: String, required: true, index: true },
@@ -181,9 +144,6 @@ const HojaRutaSchema = new Schema({
   firmanteLogistica: { type: SnapshotFirmanteSchema, default: null },
   estado: { type: String, default: "temporal", index: true },
   documentos: { type: [DocumentoHojaSchema], default: [] },
-  cierre: { type: CierreRutaSchema, default: () => ({}) },
-  liquidacion: { type: LiquidacionSchema, default: () => ({}) },
-  consignaciones: { type: [ConsignacionSchema], default: [] },
   fecha_creacion: { type: Date, default: Date.now },
   fecha_actualizacion: { type: Date, default: null },
 });

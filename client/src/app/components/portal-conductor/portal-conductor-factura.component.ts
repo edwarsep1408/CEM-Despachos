@@ -138,11 +138,6 @@ export class PortalConductorFacturaComponent implements OnInit {
     return n ? String(n).padStart(6, "0") : "Se asigna al guardar";
   }
 
-  get soloLectura() {
-    const e = String(this.data?.hoja?.estado || "vigente");
-    return e !== "vigente";
-  }
-
   get gruposMotivo() {
     const motivos = (this.data?.motivos || []).filter((m: any) => m.codigo !== "ENTREGADO");
     const grupos = [
