@@ -19,6 +19,7 @@ import reaprovisionamientosRoutes from "./reaprovisionamientos.routes"
 import pisoRoutes from "./piso.routes"
 import firmantesRoutes from "./firmantes.routes"
 import conductorRoutes from "./conductor.routes"
+import liquidacionRoutes from "./liquidacion.routes"
 
 export default {
     itemsRoutes,
@@ -41,5 +42,6 @@ export default {
     reaprovisionamientosRoutes,
     pisoRoutes,
     firmantesRoutes,
-    conductorRoutes
+    conductorRoutes,
+    liquidacionRoutes
 }

@@ -20,7 +20,7 @@ import {
 
 const hojaCtr = {};
 
-const ESTADOS = ["temporal", "vigente", "anulada"];
+const ESTADOS = ["temporal", "vigente", "cerrada", "liquidada", "anulada"];
 
 const ok = (res, body, status = 200) =>
   res.status(status).json({ status, body, error: false });

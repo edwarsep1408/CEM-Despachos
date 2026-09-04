@@ -373,3 +373,77 @@
   font-weight: 700;
   padding: 0;
 }
+
+.ruta-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.ruta-kpis div {
+  background: #fff;
+  border: 1px solid #dbe4f0;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.ruta-kpis dt {
+  margin: 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.ruta-kpis dd {
+  margin: 2px 0 0;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.ruta-kpis dd.is-ok {
+  color: #166534;
+}
+
+.ruta-badge-ruta {
+  display: inline-block;
+  margin: 0 0 12px;
+}
+
+.ruta-badge-ruta[data-liq="paz_y_salvo"],
+.ruta-badge-ruta[data-estado="liquidada"] {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ruta-badge-ruta[data-liq="pendiente"] {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.ruta-badge-ruta[data-liq="rechazada"] {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ruta-badge-ruta[data-estado="cerrada"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.ruta-liq {
+  margin-top: 24px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+}
+
+.ruta-liq h2 {
+  font-size: 1.05rem;
+  margin: 0 0 8px;
+}
+
+.ruta-liq .login-submit {
+  margin-top: 12px;
+}

@@ -10,6 +10,7 @@
     <p class="doc-marca">Cárnicos y Alimentos SAS · Pollocoa</p>
     <h1>Documento de novedades en ruta</h1>
     <p class="doc-nro">No. {{ nroNovedad }}</p>
+    <p class="ruta-meta" *ngIf="soloLectura">La ruta está cerrada. Esta factura es solo consulta.</p>
 
     <dl class="doc-cab">
       <div><dt>Cliente</dt><dd>{{ data.stop?.cliente || "—" }}</dd></div>
@@ -226,8 +227,8 @@
       </label>
     </section>
 
-    <button type="button" class="login-submit ruta-guardar" (click)="guardar()" [disabled]="guardando">
-      {{ guardando ? "Guardando…" : (entregaCompleta ? "Confirmar entrega" : "Guardar novedad") }}
+    <button type="button" class="login-submit ruta-guardar" (click)="guardar()" [disabled]="guardando || soloLectura">
+      {{ soloLectura ? "Ruta cerrada" : guardando ? "Guardando…" : (entregaCompleta ? "Confirmar entrega" : "Guardar novedad") }}
     </button>
   </ng-container>
 </div>

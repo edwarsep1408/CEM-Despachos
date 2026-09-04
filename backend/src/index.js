@@ -51,6 +51,7 @@ app.use('/api/v1', IndexRoutes.reaprovisionamientosRoutes);
 app.use('/api/v1', IndexRoutes.pisoRoutes);
 app.use('/api/v1', IndexRoutes.firmantesRoutes);
 app.use('/api/v1', IndexRoutes.conductorRoutes);
+app.use('/api/v1', IndexRoutes.liquidacionRoutes);
 
 const ipsLan = () =>
     Object.values(os.networkInterfaces())

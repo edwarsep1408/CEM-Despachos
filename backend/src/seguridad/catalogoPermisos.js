@@ -21,6 +21,7 @@ export const CATALOGO_PERMISOS = [
   { codigo: "despacho.compromisos", modulo: "Despacho", nombre: "Enviar compromisos" },
   { codigo: "despacho.piso", modulo: "Despacho", nombre: "Piso despacho" },
   { codigo: "despacho.conductor", modulo: "Despacho", nombre: "Portal conductor" },
+  { codigo: "despacho.liquidacion", modulo: "Despacho", nombre: "Cierre y liquidación" },
   { codigo: "seguridad.permisos", modulo: "Configuración", nombre: "Permisos" },
   { codigo: "seguridad.perfiles", modulo: "Configuración", nombre: "Perfiles" },
   { codigo: "seguridad.usuarios", modulo: "Configuración", nombre: "Usuarios" },

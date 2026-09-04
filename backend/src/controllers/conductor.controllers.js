@@ -20,6 +20,16 @@ import {
   etiquetaTipoRecaudo,
   bancoPorTipo,
 } from "../data/recaudosRuta";
+import {
+  BANCOS_CONSIGNACION,
+  evaluarLiquidacion,
+  facturasPendientes,
+  puedeEditarLiquidacion,
+  presentarCierre,
+  presentarConsignacion,
+  presentarLiquidacion,
+  sanitizarConsignacion,
+} from "../data/liquidacionRuta";
 import { leerComprobanteDesdeFoto } from "../services/ocrComprobante.servicios";
 
 const conductorCtr = {};
@@ -157,15 +167,31 @@ const presentarHoja = (hoja) => ({
   conductor: hoja.conductor || "",
   auxiliar: hoja.auxiliar || "",
   estado: hoja.estado,
+  cierre: presentarCierre(hoja),
+  liquidacion: presentarLiquidacion(hoja),
+  consignaciones: (hoja.consignaciones || []).map((row) => presentarConsignacion(row)),
+  bancos: BANCOS_CONSIGNACION,
+  cruce: evaluarLiquidacion(hoja),
   facturas: (hoja.documentos || []).filter(esFactura).map(presentarStop),
 });
 
 const buscarHojas = async (placa) => {
   const placas = variantesPlaca(placa);
   return hojaModel
-    .find({ estado: "vigente", placa: { $in: placas } })
+    .find({
+      estado: { $in: ["vigente", "cerrada", "liquidada"] },
+      placa: { $in: placas },
+    })
     .sort({ fecha: -1, idHoja: -1 })
     .lean();
+};
+
+const hojaEditableDePlaca = async (placa, hojaId) => {
+  if (!hojaId || !mongoose.isValidObjectId(hojaId)) return null;
+  const hoja = await hojaModel.findById(hojaId);
+  if (!hoja) return null;
+  if (!variantesPlaca(placa).includes(normalizarPlaca(hoja.placa))) return null;
+  return hoja;
 };
 
 const hojaDePlaca = async (placa, hojaId) => {
@@ -238,7 +264,7 @@ conductorCtr.getHoja = async (req, res) => {
   if (!placa) return fail(res, "Esta sesión no es de conductor.", 403);
   try {
     const hoja = await hojaDePlaca(placa, req.params.hojaId);
-    if (!hoja) return fail(res, "No hay hoja de ruta vigente para esta placa.", 404);
+    if (!hoja) return fail(res, "No hay hoja de ruta para esta placa.", 404);
     return ok(res, presentarHoja(hoja));
   } catch (error) {
     console.error("getHojaConductor:", error.message);
@@ -442,7 +468,7 @@ conductorCtr.getFactura = async (req, res) => {
   if (!placa) return fail(res, "Esta sesión no es de conductor.", 403);
   try {
     const hoja = await hojaDePlaca(placa, req.params.hojaId);
-    if (!hoja) return fail(res, "No hay hoja de ruta vigente para esta placa.", 404);
+    if (!hoja) return fail(res, "No hay hoja de ruta para esta placa.", 404);
     const doc = (hoja.documentos || []).find((d) => String(d._id) === String(req.params.docId));
     if (!doc || !esFactura(doc)) return fail(res, "No se encontró la factura en esta hoja.", 404);
     const factura = await facturasModel.findOne({ numFactura: String(doc.nroFactura).trim() }).lean();
@@ -461,6 +487,7 @@ conductorCtr.getFactura = async (req, res) => {
         placa: hoja.placa,
         conductor: hoja.conductor || "",
         auxiliar: hoja.auxiliar || "",
+        estado: hoja.estado,
       },
       stop: presentarStop(doc),
       factura: factura
@@ -515,7 +542,10 @@ conductorCtr.guardarEntrega = async (req, res) => {
   }
   try {
     const hoja = await hojaModel.findById(hojaId);
-    if (!hoja || hoja.estado !== "vigente") return fail(res, "No hay hoja de ruta vigente.", 404);
+    if (!hoja) return fail(res, "No hay hoja de ruta vigente.", 404);
+    if (hoja.estado !== "vigente") {
+      return fail(res, "La ruta ya está cerrada. No se pueden editar entregas.");
+    }
     if (!variantesPlaca(placa).includes(normalizarPlaca(hoja.placa))) {
       return fail(res, "Esta hoja no pertenece a su placa.", 403);
     }
@@ -589,6 +619,110 @@ conductorCtr.guardarEntrega = async (req, res) => {
   } catch (error) {
     console.error("guardarEntregaConductor:", error.message);
     return fail(res, error.message || "No se pudo guardar la novedad.", error.status || 500);
+  }
+};
+
+conductorCtr.cerrarRuta = async (req, res) => {
+  const placa = placaSesion(req);
+  if (!placa) return fail(res, "Esta sesión no es de conductor.", 403);
+  try {
+    const hoja = await hojaEditableDePlaca(placa, req.params.hojaId);
+    if (!hoja) return fail(res, "No se encontró la hoja de ruta.", 404);
+    if (hoja.estado === "liquidada") return fail(res, "Esta ruta ya está liquidada.");
+    if (hoja.estado === "cerrada") return ok(res, presentarHoja(hoja.toObject()));
+    if (hoja.estado !== "vigente") return fail(res, "Solo se cierra una hoja vigente.");
+    const pendientes = facturasPendientes(hoja);
+    if (pendientes.length) {
+      return fail(
+        res,
+        `Aún hay ${pendientes.length} factura(s) sin entrega. Complete todas antes de cerrar la ruta.`
+      );
+    }
+    hoja.estado = "cerrada";
+    hoja.cierre = {
+      fecha: new Date(),
+      usuario: placa,
+      observaciones: String(req.body?.observaciones || "").trim(),
+    };
+    if (!hoja.liquidacion) hoja.liquidacion = {};
+    if (!hoja.liquidacion.estado || hoja.liquidacion.estado === "paz_y_salvo") {
+      hoja.liquidacion.estado = "sin_liquidar";
+    }
+    hoja.fecha_actualizacion = new Date();
+    await hoja.save();
+    return ok(res, presentarHoja(hoja.toObject()));
+  } catch (error) {
+    console.error("cerrarRutaConductor:", error.message);
+    return fail(res, error.message || "No se pudo cerrar la ruta.", error.status || 500);
+  }
+};
+
+conductorCtr.agregarConsignacion = async (req, res) => {
+  const placa = placaSesion(req);
+  if (!placa) return fail(res, "Esta sesión no es de conductor.", 403);
+  try {
+    const hoja = await hojaEditableDePlaca(placa, req.params.hojaId);
+    if (!hoja) return fail(res, "No se encontró la hoja de ruta.", 404);
+    if (hoja.estado !== "cerrada") {
+      return fail(res, "Cierre la ruta antes de registrar consignaciones.");
+    }
+    if (!puedeEditarLiquidacion(hoja)) {
+      return fail(res, "Esta liquidación ya está en paz y salvo.");
+    }
+    hoja.consignaciones.push(sanitizarConsignacion(req.body, { usuario: placa, origen: "conductor" }));
+    if (hoja.liquidacion?.estado === "pendiente") hoja.liquidacion.estado = "sin_liquidar";
+    hoja.fecha_actualizacion = new Date();
+    await hoja.save();
+    return ok(res, presentarHoja(hoja.toObject()), 201);
+  } catch (error) {
+    console.error("agregarConsignacionConductor:", error.message);
+    return fail(res, error.message || "No se pudo agregar la consignación.", error.status || 500);
+  }
+};
+
+conductorCtr.eliminarConsignacion = async (req, res) => {
+  const placa = placaSesion(req);
+  if (!placa) return fail(res, "Esta sesión no es de conductor.", 403);
+  try {
+    const hoja = await hojaEditableDePlaca(placa, req.params.hojaId);
+    if (!hoja) return fail(res, "No se encontró la hoja de ruta.", 404);
+    if (hoja.estado !== "cerrada" || !puedeEditarLiquidacion(hoja)) {
+      return fail(res, "No se puede borrar consignaciones de esta liquidación.");
+    }
+    const row = hoja.consignaciones.id(req.params.consignacionId);
+    if (!row) return fail(res, "No se encontró la consignación.", 404);
+    row.deleteOne();
+    if (hoja.liquidacion?.estado === "pendiente") hoja.liquidacion.estado = "sin_liquidar";
+    hoja.fecha_actualizacion = new Date();
+    await hoja.save();
+    return ok(res, presentarHoja(hoja.toObject()));
+  } catch (error) {
+    console.error("eliminarConsignacionConductor:", error.message);
+    return fail(res, error.message || "No se pudo borrar la consignación.", error.status || 500);
+  }
+};
+
+conductorCtr.enviarLiquidacion = async (req, res) => {
+  const placa = placaSesion(req);
+  if (!placa) return fail(res, "Esta sesión no es de conductor.", 403);
+  try {
+    const hoja = await hojaEditableDePlaca(placa, req.params.hojaId);
+    if (!hoja) return fail(res, "No se encontró la hoja de ruta.", 404);
+    if (hoja.estado !== "cerrada") return fail(res, "Cierre la ruta antes de enviar a liquidar.");
+    if (!puedeEditarLiquidacion(hoja)) return fail(res, "Esta liquidación ya está en paz y salvo.");
+    hoja.liquidacion = {
+      ...(hoja.liquidacion?.toObject ? hoja.liquidacion.toObject() : hoja.liquidacion || {}),
+      gastosOperativos: Math.max(0, num(req.body?.gastosOperativos)),
+      monedas: Math.max(0, num(req.body?.monedas)),
+      observaciones: String(req.body?.observaciones || "").trim(),
+      estado: "pendiente",
+    };
+    hoja.fecha_actualizacion = new Date();
+    await hoja.save();
+    return ok(res, presentarHoja(hoja.toObject()));
+  } catch (error) {
+    console.error("enviarLiquidacionConductor:", error.message);
+    return fail(res, error.message || "No se pudo enviar la liquidación.", error.status || 500);
   }
 };
 
