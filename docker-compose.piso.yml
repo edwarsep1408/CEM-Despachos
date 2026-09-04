@@ -1,0 +1,16 @@
+# Agente báscula en el PC del muelle (misma red LAN que el convertidor USR).
+# Uso: docker compose -f docker-compose.piso.yml up -d
+name: cem-despachos-piso
+
+services:
+  agente-bascula:
+    build:
+      context: .
+      dockerfile: agente-bascula/Dockerfile
+    container_name: cem-despachos-agente-bascula
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - agente-bascula/.env
+    environment:
+      HOST: 0.0.0.0

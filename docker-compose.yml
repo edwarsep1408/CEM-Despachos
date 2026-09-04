@@ -1,0 +1,68 @@
+name: cem-despachos
+
+services:
+  mongo:
+    image: mongo:6
+    container_name: cem-despachos-mongo
+    restart: unless-stopped
+    ports:
+      - "${MONGODB_PORT:-27027}:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER:-cem}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-cemlocal}
+      MONGO_INITDB_DATABASE: ${MONGODB_DB:-cem-db_distribuccion}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "mongodb://127.0.0.1:27017/admin",
+          "-u",
+          "${MONGODB_USER:-cem}",
+          "-p",
+          "${MONGODB_PASSWORD:-cemlocal}",
+          "--eval",
+          "db.runCommand({ ping: 1 }).ok",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 25s
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: cem-despachos-api
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3020}:3020"
+    env_file:
+      - .env
+    environment:
+      PORT: 3020
+      MONGODB_HOST: mongo
+      MONGODB_PORT: 27017
+    volumes:
+      - backend_tmp:/app/backend/tmp
+
+  web:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    container_name: cem-despachos-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-4220}:80"
+
+volumes:
+  mongo_data:
+  backend_tmp:

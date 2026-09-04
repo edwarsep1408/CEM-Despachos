@@ -7,6 +7,7 @@
     "dev": "PORT=3020 nodemon src/index.js --exec babel-node",
     "build": "babel src -d dist",
     "start": "PORT=3020 nodemon src/index.js --exec babel-node",
+    "start:prod": "node dist/index.js",
     "etl:pedidos": "babel-node src/etl/runPedidosSiesa.js",
     "etl:vidas-utiles": "babel-node src/etl/aplicarVidasUtiles.js",
     "etl:empaques": "babel-node src/etl/aplicarVidasUtiles.js"
@@ -35,7 +36,8 @@
     "tesseract.js": "^5.1.1",
     "uuid": "^9.0.1",
     "xlsx": "^0.18.5",
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "@babel/runtime": "^7.23.7"
   },
   "devDependencies": {
     "@babel/cli": "^7.23.4",
@@ -43,7 +45,6 @@
     "@babel/node": "^7.22.19",
     "@babel/plugin-transform-runtime": "^7.23.7",
     "@babel/preset-env": "^7.23.7",
-    "@babel/runtime": "^7.23.7",
     "nodemon": "^3.0.2"
   }
 }

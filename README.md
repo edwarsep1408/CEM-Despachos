@@ -75,6 +75,46 @@ npm run start
 
 ---
 
+## 🐳 Docker (servidor / VPS)
+
+Stack principal: **Mongo + API + web** en un solo comando.
+
+```bash
+cp .env.example .env
+# Edita JWT_SECRET, credenciales SIESA, etc.
+
+docker compose up -d --build
+```
+
+| Servicio | URL |
+|----------|-----|
+| Web | http://localhost:4220 |
+| API | http://localhost:3020 |
+| Mongo | localhost:27027 |
+
+Comandos útiles:
+
+```bash
+docker compose logs -f backend
+docker compose down
+docker compose up -d --build
+```
+
+### PC del muelle (agente báscula)
+
+El agente debe estar en la **misma red LAN** que el convertidor USR:
+
+```bash
+cp agente-bascula/.env.example agente-bascula/.env
+# Ajusta BASCULA_IP y BASCULA_PUERTO
+
+docker compose -f docker-compose.piso.yml up -d --build
+```
+
+El portal en ese PC usa `agenteBasculaUrl: http://127.0.0.1:3920` (ya configurado en Angular).
+
+---
+
 ## 📦 Módulos del Sistema
 
 ### 🔄 Gestión de Inventario

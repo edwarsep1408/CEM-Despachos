@@ -1,0 +1,13 @@
+**/node_modules
+**/.angular
+**/dist
+.git
+.gitignore
+.env
+**/.env
+.cursor
+**/.DS_Store
+client/dist
+backend/dist
+backend/tmp/files/*
+!backend/tmp/files/.gitkeep
