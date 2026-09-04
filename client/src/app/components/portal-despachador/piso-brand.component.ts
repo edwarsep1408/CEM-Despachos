@@ -4,7 +4,7 @@ import { Component } from "@angular/core";
   selector: "app-piso-brand",
   standalone: true,
   template: `
-    <span class="piso-brand" aria-label="CEM DESPACHOS">
+    <span class="piso-brand" aria-label="CEM-Despachos">
       <img src="assets/img/LOGOTIPO.svg" alt="CEM" class="piso-brand-logo" />
       <span class="piso-brand-text">DESPACHOS</span>
     </span>

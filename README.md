@@ -1,7 +1,7 @@
 
-# 🚛 CEM Logística
+# CEM-Despachos
 
-**CEM Logística** es un sistema enfocado en la gestión integral de procesos logísticos dentro de la compañía. A lo largo del desarrollo del proyecto, se han integrado múltiples funcionalidades orientadas a la mejora operativa, trazabilidad y eficiencia en el manejo de inventarios.
+**CEM-Despachos** es el sistema de gestión de despachos de Cárnicos y Alimentos: pedidos, cargues, piso, hojas de ruta, básculas y portal del conductor.
 
 El sistema cuenta con:
 
@@ -24,7 +24,7 @@ El sistema cuenta con:
 ## 🧩 Estructura del Proyecto
 
 ```
-cem-logistica/
+cem-despachos/
 ├── client/                # Frontend (Angular)
 │   ├── src/
 │       └── app
@@ -53,8 +53,8 @@ cem-logistica/
 1. Clona el repositorio:
 
 ```bash
-git clone https://github.com/tu_usuario/cem-logistica.git
-cd cem-logistica
+git clone https://github.com/Carnicos-y-Alimentos/CEM-logistica.git
+cd CEM-logistica
 ```
 
 2. Instala y ejecuta el **Frontend**:
