@@ -9,7 +9,23 @@ import {
   pedirYImprimirEtiquetas,
 } from "../../services/despacho/etiquetas-cargue";
 import { PisoBrandComponent } from "./piso-brand.component";
-import { atajoBloqueado, avancePedido, confirmarDesbalance, confirmarRepesar, documentoCerrado, documentoDespachado, documentoOmitido, etiquetaCargue, lineaOmitida, mensajeApi, pedirMotivoOmision, pedidoEnDe } from "./piso-ui";
+import {
+  atajoBloqueado,
+  avancePedido,
+  AvancePedido,
+  confirmarDesbalance,
+  confirmarRepesar,
+  documentoCerrado,
+  documentoDespachado,
+  documentoOmitido,
+  etiquetaCargue,
+  lineaOmitida,
+  mensajeApi,
+  pedirMotivoOmision,
+  pedidoEnDe,
+} from "./piso-ui";
+
+type AlertaDesbalance = { linea: { producto?: string }; av: AvancePedido };
 import { etiquetaPedido } from "../../core/etiqueta-docto";
 import Swal from "sweetalert2";
 
@@ -163,21 +179,19 @@ export class PortalLineasComponent implements OnInit {
 
   async finalizar() {
     if (this.docCerrado) return;
-    const alertas = (this.lineas || [])
+    const conAvance: AlertaDesbalance[] = (this.lineas || [])
       .filter((l: any) => !lineaOmitida(l))
-      .map((l: any) => ({ linea: l, av: avancePedido(l) }))
-      .filter((row: { linea: any; av: { estado: string; etiqueta: string; pct: number } }) =>
-        row.av.estado === "falta" || row.av.estado === "exceso"
-      );
+      .map((l: any): AlertaDesbalance => ({ linea: l, av: avancePedido(l) }));
+    const alertas = conAvance.filter(
+      ({ av }) => av.estado === "falta" || av.estado === "exceso"
+    );
     let forzar = false;
     if (alertas.length) {
       const detalle = alertas
-        .map((row: { linea: any; av: { etiqueta: string; pct: number } }) =>
-          `${row.linea.producto}: ${row.av.etiqueta} (${row.av.pct.toFixed(0)}%)`
-        )
+        .map(({ linea, av }) => `${linea.producto}: ${av.etiqueta} (${av.pct.toFixed(0)}%)`)
         .join("\n");
-      const hayExceso = alertas.some((row: { av: { estado: string } }) => row.av.estado === "exceso");
-      const hayFalta = alertas.some((row: { av: { estado: string } }) => row.av.estado === "falta");
+      const hayExceso = alertas.some(({ av }) => av.estado === "exceso");
+      const hayFalta = alertas.some(({ av }) => av.estado === "falta");
       const ok = await confirmarDesbalance({
         estado: hayExceso && !hayFalta ? "exceso" : "falta",
         etiqueta: hayExceso && hayFalta ? "Falta y exceso" : hayExceso ? "Se pasó" : "Falta",

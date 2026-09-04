@@ -97,7 +97,9 @@ export function pedidoEnDe(row: any): "UNIDADES" | "KILOS" {
 
 export type EstadoAvance = "falta" | "completo" | "exceso";
 
-export function avancePedido(linea: any): { pct: number; estado: EstadoAvance; etiqueta: string } {
+export type AvancePedido = { pct: number; estado: EstadoAvance; etiqueta: string };
+
+export function avancePedido(linea: any): AvancePedido {
   const enKilos = pedidoEnDe(linea) === "KILOS";
   const pedido = enKilos ? Number(linea?.pesoPedido || 0) : Number(linea?.unidades || 0);
   const despachado = enKilos ? Number(linea?.pd || 0) : Number(linea?.cd || 0);

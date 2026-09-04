@@ -53,8 +53,8 @@ cem-despachos/
 1. Clona el repositorio:
 
 ```bash
-git clone https://github.com/Carnicos-y-Alimentos/CEM-logistica.git
-cd CEM-logistica
+git clone https://github.com/edwarsep1408/CEM-Despachos.git
+cd CEM-Despachos
 ```
 
 2. Instala y ejecuta el **Frontend**:
