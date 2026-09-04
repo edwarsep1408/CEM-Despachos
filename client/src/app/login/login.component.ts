@@ -53,7 +53,7 @@ export class LoginComponent implements OnInit {
     this.sessionService.cerrarSesion();
 
     const ssoToken = this._route.snapshot.queryParamMap.get('auth');
-    if (ssoToken) {
+    if (ssoToken && environment.ssoEnabled) {
       this.validarSso(ssoToken);
     }
   }

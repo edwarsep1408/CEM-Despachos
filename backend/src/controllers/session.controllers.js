@@ -108,6 +108,15 @@ sesionCtr.loginLocal = async (req, res) => {
 };
 
 sesionCtr.validarSesion = async (req, res) => {
+    const ssoHabilitado = String(process.env.SSO_ENABLED || "").toLowerCase() === "true";
+    if (!ssoHabilitado) {
+        return res.status(503).json({
+            status: 503,
+            body: { message: "SSO deshabilitado. Use el acceso local." },
+            error: true,
+        });
+    }
+
     const { token } = req.body;
 
     try {

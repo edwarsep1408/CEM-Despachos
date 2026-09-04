@@ -9,7 +9,8 @@ import { Socket } from "socket.io-client";
    */
   apiUrl: `http://${window.location.hostname}:3020/api/v1`,
   socketUrl: `http://${window.location.hostname}:3020`,
-  agenteBasculaUrl: 'http://127.0.0.1:3920'
+  agenteBasculaUrl: 'http://127.0.0.1:3920',
+  ssoEnabled: false,
   /* apiUrl: 'http://localhost:4200/api/v1',
   socketUrl: 'http://localhost:4200' */
 };

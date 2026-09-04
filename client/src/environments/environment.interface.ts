@@ -3,4 +3,5 @@ export interface Environment {
   apiUrl: string;
   socketUrl: string;
   agenteBasculaUrl?: string;
- }
+  ssoEnabled?: boolean;
+}

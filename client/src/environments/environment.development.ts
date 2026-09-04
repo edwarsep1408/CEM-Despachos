@@ -7,4 +7,5 @@ export const environment: Environment = {
   apiUrl: `${host}:3020/api/v1`,
   socketUrl: `${host}:3020`,
   agenteBasculaUrl: "http://127.0.0.1:3920",
+  ssoEnabled: false,
 };
