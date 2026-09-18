@@ -55,6 +55,36 @@ const mapBodega = (row = {}) => ({
   co: txt(row.f150_id_co),
 });
 
+const extraerFilas = (payload) => {
+  const detalle = payload?.detalle;
+  const candidatos = [
+    detalle?.Datos,
+    detalle?.datos,
+    detalle?.Table,
+    detalle?.table,
+    detalle,
+    payload?.Datos,
+    payload?.Table,
+  ];
+  for (const candidato of candidatos) {
+    if (Array.isArray(candidato)) return candidato;
+  }
+  return [];
+};
+
+const metaPaginacion = (payload) => {
+  const detalle = payload?.detalle || {};
+  const num = (valor) => {
+    const n = Number(valor);
+    return Number.isFinite(n) ? n : 0;
+  };
+  return {
+    pagina: num(detalle.página_actual || detalle.pagina_actual || detalle.pagina),
+    totalPaginas: num(detalle.total_páginas || detalle.total_paginas),
+    totalRegistros: num(detalle.total_registros),
+  };
+};
+
 const pedirPagina = async ({ pagina, pageSize = 100 } = {}) => {
   const { baseUrl, idCompania, consulta, headers } = configBodegas();
   const timeoutMs = Number(process.env.SIESA_BODEGAS_TIMEOUT_MS || 60000);
@@ -71,7 +101,7 @@ const pedirPagina = async ({ pagina, pageSize = 100 } = {}) => {
   if (payload.codigo && Number(payload.codigo) !== 0) {
     throw new Error(payload.mensaje || payload.detalle || "Connekta no devolvió bodegas.");
   }
-  return Array.isArray(payload.detalle?.Table) ? payload.detalle.Table : [];
+  return { filas: extraerFilas(payload), meta: metaPaginacion(payload) };
 };
 
 export const consultarBodegasSiesa = async () => {
@@ -79,17 +109,31 @@ export const consultarBodegasSiesa = async () => {
   const pageSize = Number(process.env.SIESA_BODEGAS_TAM_PAG || 100);
   const maxPaginas = Number(process.env.SIESA_BODEGAS_MAX_PAGINAS || 20);
   const filas = [];
+  let totalPaginas = 1;
   for (let pagina = 1; pagina <= maxPaginas; pagina += 1) {
-    const page = await pedirPagina({ pagina, pageSize });
+    const { filas: page, meta } = await pedirPagina({ pagina, pageSize });
     filas.push(...page);
-    if (!page.length || page.length < pageSize) break;
+    if (meta.totalPaginas) totalPaginas = meta.totalPaginas;
+    if (!page.length || pagina >= totalPaginas || page.length < pageSize) break;
   }
   const porCodigo = new Map();
+  let sinCodigo = 0;
+  let otraCia = 0;
+  let inactivas = 0;
   for (const row of filas) {
     const mapped = mapBodega(row);
-    if (!mapped.codigo) continue;
-    if (mapped.idCia !== idCiaUnoee) continue;
-    if (mapped.estado !== 1) continue;
+    if (!mapped.codigo) {
+      sinCodigo += 1;
+      continue;
+    }
+    if (mapped.idCia !== idCiaUnoee) {
+      otraCia += 1;
+      continue;
+    }
+    if (mapped.estado !== 1) {
+      inactivas += 1;
+      continue;
+    }
     if (!porCodigo.has(mapped.codigo)) porCodigo.set(mapped.codigo, mapped);
   }
   const bodegas = [...porCodigo.values()]
@@ -99,7 +143,9 @@ export const consultarBodegasSiesa = async () => {
       co,
     }))
     .sort((a, b) => a.codigo.localeCompare(b.codigo, "es"));
-  console.log(`[bodegas-siesa] ${consulta} cia ${idCiaUnoee}: ${bodegas.length} bodegas activas`);
+  console.log(
+    `[bodegas-siesa] ${consulta} cia ${idCiaUnoee}: ${bodegas.length} activas (filas ${filas.length}, otra cia ${otraCia}, inactivas ${inactivas}, sin código ${sinCodigo})`
+  );
   return bodegas;
 };
 
@@ -124,7 +170,12 @@ export const sincronizarCatalogoBodegas = async (bodegaModel) => {
       upsert: true,
     },
   }));
-  await bodegaModel.bulkWrite(ops, { ordered: false });
+  try {
+    await bodegaModel.bulkWrite(ops, { ordered: false });
+  } catch (error) {
+    console.error("Sync bodegas SIESA bulkWrite:", error.message);
+    throw error;
+  }
   return { sincronizadas: siesa.length };
 };
 

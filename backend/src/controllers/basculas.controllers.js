@@ -60,15 +60,6 @@ const validarCampos = async ({ nombre, ip, puerto, bodega, muelle }, { exceptoId
     ...filtroId,
   }).lean();
   if (duplicadaIp) return "Ya hay una báscula con esa IP y puerto.";
-  const duplicadaMuelle = await basculaModel.findOne({
-    muelle,
-    estado: 0,
-    ...filtroId,
-  }).lean();
-  if (duplicadaMuelle) {
-    const codigo = muelleDoc.bodega?.codigo || "";
-    return `Ya hay una báscula en ${muelleDoc.nombre}${codigo ? ` de ${codigo}` : ""}.`;
-  }
   return null;
 };
 

@@ -1,0 +1,56 @@
+CEM-Despachos — Agente báscula sin ventana CMD (Windows)
+========================================================
+
+OPCIÓN 1 — Arranque al encender / iniciar sesión (recomendada)
+--------------------------------------------------------------
+1. Copiar agente-bascula al PC (ej. C:\CEM\agente-bascula o desde
+   \\svr-aplic02\software\CEM-Despachos\agente-bascula).
+
+2. Tener Node.js instalado y el archivo .env configurado.
+
+3. Win + R → taskschd.msc → Enter
+
+4. Crear tarea básica:
+   - Nombre: CEM agente báscula
+   - Desencadenador: Al iniciar sesión (usuario del muelle)
+   - Acción: Iniciar un programa
+   - Programa: wscript.exe
+   - Argumentos (ajustar ruta):
+     "C:\CEM\agente-bascula\windows\iniciar-agente-oculto.vbs"
+   - Marcar: "Ejecutar con los privilegios más altos" (solo si hace falta)
+
+5. Propiedades de la tarea → Configuración:
+   - Si la tarea ya se está ejecutando: No iniciar una nueva instancia
+
+6. Probar: cerrar sesión, volver a entrar, abrir:
+   http://127.0.0.1:3920/estado
+
+OPCIÓN 2 — Carpeta Inicio (más simple, solo al login)
+-----------------------------------------------------
+1. Win + R → shell:startup → Enter
+2. Crear acceso directo a:
+   C:\CEM\agente-bascula\windows\iniciar-agente-oculto.vbs
+3. El usuario no verá CMD; el agente queda en segundo plano.
+
+OPCIÓN 3 — Servicio Windows con NSSM (técnico sistemas)
+---------------------------------------------------------
+Descargar NSSM desde https://nssm.cc
+
+  nssm install CEMAgenteBascula "C:\Program Files\nodejs\node.exe"
+  nssm set CEMAgenteBascula AppDirectory C:\CEM\agente-bascula
+  nssm set CEMAgenteBascula AppParameters src\index.js
+  nssm set CEMAgenteBascula DisplayName "CEM Agente Báscula"
+  nssm set CEMAgenteBascula Start SERVICE_AUTO_START
+  nssm start CEMAgenteBascula
+
+Detener / reiniciar desde services.msc
+
+DETENER EL AGENTE (soporte)
+---------------------------
+Ejecutar: windows\detener-agente.vbs
+
+NOTAS
+-----
+- No usar "npm start" oculto (npm abre ventanas). Usar node src\index.js.
+- El .env debe estar en la carpeta agente-bascula.
+- Si cambian IP de báscula, editar .env y reiniciar (detener + volver a iniciar).

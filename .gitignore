@@ -7,5 +7,6 @@ agente-bascula/node_modules
 .env
 **/.env
 .cursor
+exports/
 .DS_Store
 **/.DS_Store
