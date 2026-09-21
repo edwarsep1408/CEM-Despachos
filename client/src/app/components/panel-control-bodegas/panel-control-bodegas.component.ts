@@ -99,10 +99,10 @@ export class PanelControlBodegasComponent {
     this._bodegaService.consultarInventarioxBodega(this.bodegaSeleccionada.codigo).subscribe({
       next: (response) => {
         if (response.body) {
-          this.labelsInventary = response.body.labels;
-          this.dataInventary = response.body.data;
-          this.labelsLinea = response.body.labelsLinea;
-          this.dataLinea = response.body.dataLinea;
+          this.labelsInventary = response.body.labels || [];
+          this.dataInventary = (response.body.data || []).map((valor: any) => Number(valor) || 0);
+          this.labelsLinea = response.body.labelsLinea || [];
+          this.dataLinea = (response.body.dataLinea || []).map((valor: any) => Number(valor) || 0);
           this.dataSource.data = response.body.productosSinInventario;
           this.dataSourceInventarioConCantidades.data = response.body.productosConInventario;
 

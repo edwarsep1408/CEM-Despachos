@@ -171,12 +171,16 @@ export const sincronizarCatalogoBodegas = async (bodegaModel) => {
     },
   }));
   try {
-    await bodegaModel.bulkWrite(ops, { ordered: false });
+    const result = await bodegaModel.bulkWrite(ops, { ordered: false });
+    return {
+      sincronizadas: siesa.length,
+      nuevas: result.upsertedCount || 0,
+      actualizadas: result.modifiedCount || 0,
+    };
   } catch (error) {
     console.error("Sync bodegas SIESA bulkWrite:", error.message);
     throw error;
   }
-  return { sincronizadas: siesa.length };
 };
 
 export default { consultarBodegasSiesa, sincronizarCatalogoBodegas };

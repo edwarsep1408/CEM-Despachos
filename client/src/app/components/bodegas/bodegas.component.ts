@@ -34,6 +34,7 @@ export class BodegasComponent implements OnInit {
   displayedColumns: string[] = ['nombre', 'codigo', 'ubicacion', 'acciones'];
   dataSource: MatTableDataSource<PeriodicElement> = new MatTableDataSource<PeriodicElement>();
   cargando = false;
+  sincronizando = false;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -128,6 +129,39 @@ export class BodegasComponent implements OnInit {
     if (this.dataSource.paginator) {
       this.dataSource.paginator.firstPage();
     }
+  }
+
+  onSincronizar() {
+    this.sincronizando = true;
+    this._bodegasService.sincronizarSiesa().subscribe({
+      next: (response) => {
+        this.sincronizando = false;
+        const body = response.body || {};
+        if (Array.isArray(body.bodegas)) {
+          this.dataSource.data = body.bodegas as PeriodicElement[];
+          if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
+        } else {
+          this.OnGet();
+        }
+        Swal.fire({
+          title: 'Sincronización exitosa',
+          text:
+            body.message ||
+            `Se sincronizaron ${body.sincronizadas || 0} bodegas desde SIESA.`,
+          icon: 'success',
+        });
+      },
+      error: (error) => {
+        this.sincronizando = false;
+        Swal.fire({
+          title: 'No se pudieron sincronizar las bodegas',
+          text:
+            error?.error?.body?.message ||
+            'SIESA/Connekta no respondió el catálogo de bodegas.',
+          icon: 'error',
+        });
+      },
+    });
   }
 
   onSubmit() {

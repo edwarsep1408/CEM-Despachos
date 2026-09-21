@@ -22,18 +22,25 @@ import { PlanillasService } from '../../services/planillas/planillas.service';
 import { ConteoService } from '../../services/conteo/conteo.service';
 import { ItemsService } from '../../services/items/items.service';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
+import { DashboardIndicadoresComponent } from './dashboard-indicadores.component';
 
-
+type TableroDashboard = 'indicadores' | 'fisico';
+const TABLERO_KEY = 'cem-dashboard-tablero';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, MaterialModule,
-    MatPaginator, MatTableModule, MatSortModule],
+    MatPaginator, MatTableModule, MatSortModule, DashboardIndicadoresComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
 export class DashboardComponent implements OnInit {
+  tablero: TableroDashboard = 'indicadores';
+  tableros: { id: TableroDashboard; etiqueta: string }[] = [
+    { id: 'indicadores', etiqueta: 'Indicadores de inventarios' },
+    { id: 'fisico', etiqueta: 'Último inventario físico' },
+  ];
   /* TABLE */
 
   displayedColumns: string[] = [
@@ -124,14 +131,31 @@ export class DashboardComponent implements OnInit {
 
 
   ngOnInit(): void {
+    const guardado = localStorage.getItem(TABLERO_KEY);
+    if (guardado === 'indicadores' || guardado === 'fisico') {
+      this.tablero = guardado;
+    }
     this.event();
   }
 
   ngAfterViewInit() {
-    this.datasource.paginator = this.paginator;
-    this.datasource.sort = this.sort;
-    /* this.onGet(); */
-    this.onGet();
+    if (this.tablero === 'fisico') {
+      this.datasource.paginator = this.paginator;
+      this.datasource.sort = this.sort;
+      this.onGet();
+    }
+  }
+
+  seleccionarTablero(id: TableroDashboard): void {
+    this.tablero = id;
+    localStorage.setItem(TABLERO_KEY, id);
+    if (id === 'fisico') {
+      setTimeout(() => {
+        this.datasource.paginator = this.paginator;
+        this.datasource.sort = this.sort;
+        this.onGet();
+      });
+    }
   }
 
   event() {
@@ -155,33 +179,44 @@ export class DashboardComponent implements OnInit {
 
             this.dataDashboard = response.body;
             this.datasource.data = response.body.resumenInventario;
+            if (this.paginator) this.datasource.paginator = this.paginator;
+            if (this.sort) this.datasource.sort = this.sort;
             this.dataSourceEventoPlanilla = response.body.eventPlanilla;
             this.informacionInventario = response.body.informacionInventario;
             this.informacionPorMesas = response.body.informacionMesas;
             const labelsPie = response.body.labelsPie;
-            const valuePie = response.body.valPie
+            const valuePie = response.body.valPie;
 
-            /* CREAR UNA CHART PARA MOSTRAR INFORMACIÓN- POR AHORA 16 OCT 2024 NO ES INFORMACIÓN REAL */
-            this.chart = new Chart("MyChart", {
-              type: 'pie', //this denotes tha type of chart
-
-              data: { // values on X-Axis
-                labels: labelsPie,
-                datasets: [{
-                  label: 'Información pendiente de mostrar',
-                  data: valuePie,
-                  backgroundColor: [
-                    'red',
-                    'pink',
-                    'green',
-                    'yellow',
-                    'orange',
-                  ],
-                  hoverOffset: 4
-                }],
-              },
-              options: {
-                aspectRatio: 2.5
+            setTimeout(() => {
+              try {
+                const canvas = document.getElementById('MyChart') as HTMLCanvasElement | null;
+                if (!canvas) return;
+                if (this.chart && typeof this.chart.destroy === 'function') {
+                  this.chart.destroy();
+                }
+                this.chart = new Chart(canvas, {
+                  type: 'pie',
+                  data: {
+                    labels: labelsPie,
+                    datasets: [{
+                      label: 'Información pendiente de mostrar',
+                      data: valuePie,
+                      backgroundColor: [
+                        'red',
+                        'pink',
+                        'green',
+                        'yellow',
+                        'orange',
+                      ],
+                      hoverOffset: 4
+                    }],
+                  },
+                  options: {
+                    aspectRatio: 2.5
+                  }
+                });
+              } catch (error) {
+                console.error('Dashboard físico: no se pudo pintar el gráfico', error);
               }
             });
 

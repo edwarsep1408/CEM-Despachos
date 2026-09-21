@@ -5,9 +5,10 @@ import inventario_real from '../models/inventario_real';
 import pedidosModel from '../models/pedidos.models';
 import siesaPedidos from '../services/siesaPedidos.servicios';
 import { sincronizarCatalogoBodegas } from '../services/siesaBodegas.servicios';
-import { consultarExistenciasPorBodega, consultarExistenciasCompania, fuenteExistenciasCem } from '../services/siesaExistencias.servicios';
+import { consultarExistenciasPorBodega, consultarExistenciasCompania, fuenteExistenciasCem, listarBodegasInventario } from '../services/siesaExistencias.servicios';
 import { consultarExistenciasCemPorBodega, consultarExistenciasCemCompania, consultarStCem } from '../services/cemInventario.servicios';
 import { consultarDocumentosStSiesa, programarRefrescoSt, resumenSt, kpisTransito, agruparDocumentosSt } from '../services/siesaSt.servicios';
+import { armarIndicadoresInventario } from '../services/dashboardIndicadores.servicios';
 
 const CEM_INVENTARIO_API = process.env.CEM_INVENTARIO_API || 'http://192.168.1.252:5015/api/v1';
 const SIESA_ID_CIA = process.env.SIESA_ID_CIA || '13';
@@ -61,11 +62,6 @@ bodegaCtr.postBodega = async (req, res) => {
 
 bodegaCtr.getBodegas = async (req, res) => {
     try {
-        try {
-            await sincronizarCatalogoBodegas(bodegaModel);
-        } catch (syncError) {
-            console.error("Sync bodegas SIESA:", syncError.message);
-        }
         const bodegas = await bodegaModel.find({ estado: 0 }).sort({ codigo: 1 });
         if (!bodegas.length) {
             return res.status(404).json({
@@ -84,6 +80,29 @@ bodegaCtr.getBodegas = async (req, res) => {
         return res.status(500).json({
             status: 500,
             body: { message: "Hay un error en el servidor" },
+            error: true,
+        });
+    }
+};
+
+bodegaCtr.sincronizarBodegasSiesa = async (req, res) => {
+    try {
+        const resultado = await sincronizarCatalogoBodegas(bodegaModel);
+        const bodegas = await bodegaModel.find({ estado: 0 }).sort({ codigo: 1 });
+        return res.status(200).json({
+            status: 200,
+            body: {
+                message: `Se sincronizaron ${resultado.sincronizadas} bodegas desde SIESA.`,
+                ...resultado,
+                bodegas,
+            },
+            error: false,
+        });
+    } catch (error) {
+        console.error("Sincronizar bodegas SIESA:", error.message);
+        return res.status(502).json({
+            status: 502,
+            body: { message: error.message || "No se pudieron sincronizar las bodegas con SIESA." },
             error: true,
         });
     }
@@ -170,9 +189,15 @@ const TIPOS_INVENTARIO_BODEGA = new Set([
     'INV143502T',
     'INV143503',
     'INVSUBEX',
+    'INVSUB',
     'INVCANASTA',
     'INV143501',
 ]);
+
+const tipoInventarioPermitido = (tipo) => {
+    const valor = String(tipo || "").trim();
+    return !valor || TIPOS_INVENTARIO_BODEGA.has(valor);
+};
 
 bodegaCtr.getInventarioBodega = async (req, res) => {
 
@@ -204,17 +229,18 @@ bodegaCtr.getInventarioBodega = async (req, res) => {
                 for (let index = 0; index < respuesta.length; index++) {
 
                     const tipo_inventario = String(respuesta[index].tipo_inventario || "").trim();
-                    const descripcionLinea = respuesta[index].descripcion_linea !== null ? respuesta[index].descripcion_linea.trim() : null;
-                    const idLinea = respuesta[index].id_linea !== null ? respuesta[index].id_linea.trim() : null;
-                    const id_comb_criterio = respuesta[index].id_comb_criter !== null ? respuesta[index].id_comb_criter.trim() : null;
+                    const descripcionLinea = String(respuesta[index].descripcion_linea || "").trim() || null;
+                    const idLinea = String(respuesta[index].id_linea || "").trim() || null;
+                    const id_comb_criterio = String(respuesta[index].id_comb_criter || "").trim() || null;
+                    const nombreItem = String(respuesta[index].descripcion || "").trim().toUpperCase();
 
                     if (!tipo_inventario || TIPOS_INVENTARIO_BODEGA.has(tipo_inventario)) {
 
                         const { referencia, descripcion, unidad_medida_1, unidad_medida_2, Existencia_1, Existencia_2, abc_rotacion_veces, id_linea, descripcion_linea, id_comb_criter, descrip_comb_criter } = respuesta[index];
 
-                        if (respuesta[index].descripcion === 'CANASTAS' || respuesta[index].descripcion === 'CANASTILLAS') {
+                        if (nombreItem === 'CANASTAS' || nombreItem === 'CANASTILLAS') {
 
-                            if (respuesta[index].descripcion === 'CANASTAS') {
+                            if (nombreItem === 'CANASTAS') {
 
                                 canastas = Existencia_1;
 
@@ -277,10 +303,10 @@ bodegaCtr.getInventarioBodega = async (req, res) => {
                 /* Acumular los valores por cada línea  */
                 for (let index = 0; index < productosConInventario.length; index++) {
 
-                    const id_linea = productosConInventario[index].id_linea !== null ? productosConInventario[index].id_linea.trim() : null;
-                    const descripcionLinea = productosConInventario[index].descripcion_linea !== null ? productosConInventario[index].descripcion_linea.trim() : null;
-                    const descrip_comb_criter = productosConInventario[index].descrip_comb_criter !== null ? productosConInventario[index].descrip_comb_criter.trim() : null;
-                    const id_comb_criter = productosConInventario[index].id_comb_criter !== null ? productosConInventario[index].id_comb_criter.trim() : null;
+                    const id_linea = String(productosConInventario[index].id_linea || "").trim() || null;
+                    const descripcionLinea = String(productosConInventario[index].descripcion_linea || "").trim() || null;
+                    const descrip_comb_criter = String(productosConInventario[index].descrip_comb_criter || "").trim() || null;
+                    const id_comb_criter = String(productosConInventario[index].id_comb_criter || "").trim() || null;
 
                     if (descripcionLinea !== null && descripcionLinea != 'CANASTAS' && descripcionLinea != 'CANASTILLAS') {
 
@@ -343,7 +369,18 @@ bodegaCtr.getInventarioBodega = async (req, res) => {
                 /* Después de tener la data organizada de mayor a menor tomamos los labels y la data para enviarla al front */
 
                 labelsLinea = valoresLineaOrganizados.map(([label]) => label);
-                dataLinea = valoresLineaOrganizados.map(([, value]) => value);
+                dataLinea = valoresLineaOrganizados.map(([, value]) => Number(value) || 0);
+
+                if (!labelsLinea.length && productosConInventario.length) {
+                    const top = productosConInventario.slice(0, 12);
+                    labelsLinea = top.map((item) => item.descripcion);
+                    dataLinea = top.map((item) => Number(item.Existencia_1) || 0);
+                }
+                if (!labelsCmbnacionCriterios.length && productosConInventario.length) {
+                    const top = productosConInventario.slice(0, 12);
+                    labelsCmbnacionCriterios = top.map((item) => item.descripcion);
+                    dataCmbnacionCriterios = top.map((item) => Number(item.Existencia_1) || 0);
+                }
 
                 /* Se organiza la información de inventario con info de mayor a menor de acuerdo a cantidad en inventario  */
                 productosConInventario.sort((a, b) => b.Existencia_1 - a.Existencia_1);
@@ -530,16 +567,7 @@ bodegaCtr.inventarioTotalCompania = async (req, res) => {
         /* INICIALIZAR LOS VALORES DE LAS VARIABLES */
 
         infoBodegas.forEach(element => {
-            const tipo_inventario = String(element.tipo_inventario || "").trim();
-            if (
-                tipo_inventario === 'INV143502'
-                || tipo_inventario === 'INV143502G'
-                || tipo_inventario === 'INV143502T'
-                || tipo_inventario === 'INV143503'
-                || tipo_inventario === 'INVSUBEX'
-                || tipo_inventario === 'INVSUB'
-                || tipo_inventario === 'INV143501'
-            ) {
+            if (tipoInventarioPermitido(element.tipo_inventario)) {
                 /* hacer trim para eliminar espacios */
                 const referencia = String(element.referencia || "").trim();
                 const codigo_bodega = String(element.codigo_bodega || "").trim();
@@ -624,17 +652,7 @@ bodegaCtr.inventarioTotalCompania = async (req, res) => {
 
         /* Recorrer la información de las bodegas y asociar las informaciones de las cantidades según la referencia y bodega*/
         infoBodegas.forEach(element => {
-
-            const tipo_inventario = String(element.tipo_inventario || "").trim();
-            if (
-                tipo_inventario === 'INV143502'
-                || tipo_inventario === 'INV143502G'
-                || tipo_inventario === 'INV143502T'
-                || tipo_inventario === 'INV143503'
-                || tipo_inventario === 'INVSUBEX'
-                || tipo_inventario === 'INVSUB'
-                || tipo_inventario === 'INV143501'
-            ) {
+            if (tipoInventarioPermitido(element.tipo_inventario)) {
                 /* trim para eliminar espacios */
                 const referencia = String(element.referencia || "").trim();
                 const codigo_bodega = String(element.codigo_bodega || "").trim();
@@ -944,78 +962,94 @@ bodegaCtr.inventarioTransito = async (req, res) => {
     });
 };
 
+const bodegasProducto = (bodegas) =>
+    (Array.isArray(bodegas) ? bodegas : [])
+        .map((bodega) => ({
+            codigo: String(bodega.codigo || "").trim(),
+            descripcion: String(bodega.descripcion || "").trim(),
+        }))
+        .filter((bodega) => bodega.codigo.startsWith("P"));
+
 bodegaCtr.getBodegasInventarioctr = async (req, res) => {
-
     try {
-
-        const consultarBodegas = await axios.get(`${CEM_INVENTARIO_API}/get-bodegas-cia/${SIESA_ID_CIA}`, { timeout: INVENTARIO_TIMEOUT_MS });
-        /* Despues de tener la petición leer las bodegas enviarla al front para que las bodegas sean dinámicas y no fijas.  */
-        let infoBodegas = [];
-        let bodegas = Array.isArray(consultarBodegas.data.body) ? consultarBodegas.data.body : [];
-
-        if (bodegas) {
-
-            bodegas.map((bodega) => {
-                
-                let codigo_bodega = bodega.codigo.trim();
-
-                if (codigo_bodega.startsWith('P')) {
-                
-                    
-                    infoBodegas.push({
-                        codigo: codigo_bodega,
-                        descripcion: bodega.descripcion.trim(),
-                    });
-                }
-
-            });
-        }
-
-        return res.status(200).json({
-            status: 200,
-            body: infoBodegas,
-            error: false
-        });
-    } catch (error) {
-
-        console.error("Error al consultar las bodegas", error.message);
-        try {
-            const pedidos = await pedidosModel.find({}).lean();
-            const mapa = new Map();
-            for (const pedido of pedidos) {
-                const lineas = siesaPedidos.lineasDePedido(pedido);
-                const { bodega } = siesaPedidos.resolverBodegaPedido(pedido, lineas);
-                const codigo = String(bodega || "").trim();
-                if (codigo) mapa.set(codigo, { codigo, descripcion: codigo });
-            }
-            const locales = await bodegaModel.find({ estado: 0 }).lean();
-            for (const row of locales) {
-                const codigo = String(row.codigo || "").trim();
-                if (codigo && !mapa.has(codigo)) {
-                    mapa.set(codigo, { codigo, descripcion: row.nombre || codigo });
-                }
-            }
-            const body = Array.from(mapa.values()).sort((a, b) => a.codigo.localeCompare(b.codigo));
-            if (body.length) {
+        if (!fuenteExistenciasCem()) {
+            const infoBodegas = bodegasProducto(await listarBodegasInventario());
+            if (infoBodegas.length) {
                 return res.status(200).json({
                     status: 200,
-                    body,
+                    body: infoBodegas,
                     error: false,
-                    aviso: "Inventario CEM (5015) no respondió; bodegas tomadas de pedidos y catálogo local.",
                 });
             }
-        } catch (fallbackError) {
-            console.error("Fallback bodegas:", fallbackError.message);
+        } else {
+            const consultarBodegas = await axios.get(
+                `${CEM_INVENTARIO_API}/get-bodegas-cia/${SIESA_ID_CIA}`,
+                { timeout: INVENTARIO_TIMEOUT_MS }
+            );
+            const bodegas = Array.isArray(consultarBodegas.data.body) ? consultarBodegas.data.body : [];
+            return res.status(200).json({
+                status: 200,
+                body: bodegasProducto(bodegas),
+                error: false,
+            });
         }
-        return res.status(502).json({
-            status: 502,
-            body: [],
-            error: true,
-            message: 'No se pudieron consultar las bodegas en el servicio CEM (5015).',
-        });
-
+    } catch (error) {
+        console.error("Error al consultar las bodegas", error.message);
     }
 
+    try {
+        const pedidos = await pedidosModel.find({}).lean();
+        const mapa = new Map();
+        for (const pedido of pedidos) {
+            const lineas = siesaPedidos.lineasDePedido(pedido);
+            const { bodega } = siesaPedidos.resolverBodegaPedido(pedido, lineas);
+            const codigo = String(bodega || "").trim();
+            if (codigo) mapa.set(codigo, { codigo, descripcion: codigo });
+        }
+        const locales = await bodegaModel.find({ estado: 0 }).lean();
+        for (const row of locales) {
+            const codigo = String(row.codigo || "").trim();
+            if (codigo && !mapa.has(codigo)) {
+                mapa.set(codigo, { codigo, descripcion: row.nombre || codigo });
+            }
+        }
+        const body = Array.from(mapa.values()).sort((a, b) => a.codigo.localeCompare(b.codigo));
+        if (body.length) {
+            return res.status(200).json({
+                status: 200,
+                body,
+                error: false,
+                aviso: "Connekta no devolvió bodegas de inventario; se usaron pedidos y catálogo local.",
+            });
+        }
+    } catch (fallbackError) {
+        console.error("Fallback bodegas:", fallbackError.message);
+    }
+
+    return res.status(502).json({
+        status: 502,
+        body: [],
+        error: true,
+        message: "No se pudieron consultar las bodegas de inventario.",
+    });
+};
+
+bodegaCtr.dashboardIndicadoresInventario = async (req, res) => {
+    try {
+        const body = await armarIndicadoresInventario();
+        return res.status(200).json({
+            status: 200,
+            body,
+            error: false,
+        });
+    } catch (error) {
+        console.error("Dashboard indicadores:", error.message);
+        return res.status(502).json({
+            status: 502,
+            body: { message: error.message || "No se pudieron armar los indicadores de inventario." },
+            error: true,
+        });
+    }
 };
 
 

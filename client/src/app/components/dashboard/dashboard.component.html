@@ -3,11 +3,28 @@
     <i class="bx bxs-dashboard page-banner-icon"></i>
     <div>
       <h1>Panel de análisis</h1>
-      <p>Resumen del último inventario físico.</p>
+      <p *ngIf="tablero === 'indicadores'">Inventario actual en SIESA: ocupación, tipo y top productos.</p>
+      <p *ngIf="tablero === 'fisico'">Resumen del último inventario físico.</p>
     </div>
   </div>
 </div>
 
+<div class="dashboard-tabs">
+  <button
+    type="button"
+    class="btn"
+    *ngFor="let item of tableros"
+    [class.btn-primary]="tablero === item.id"
+    [class.btn-outline-primary]="tablero !== item.id"
+    (click)="seleccionarTablero(item.id)"
+  >
+    {{ item.etiqueta }}
+  </button>
+</div>
+
+<app-dashboard-indicadores *ngIf="tablero === 'indicadores'"></app-dashboard-indicadores>
+
+<ng-container *ngIf="tablero === 'fisico'">
 <div class="row" *ngIf="mesasSinInformacion === true">
   <div class="col-12">
     <div class="card">
@@ -495,3 +512,4 @@
     </div>
   </div>
 </div>
+</ng-container>

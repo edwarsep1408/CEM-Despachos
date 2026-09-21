@@ -1,0 +1,117 @@
+<div class="indicadores" *ngIf="!cargando && data">
+  <div class="indicadores-head">
+    <div>
+      <p class="indicadores-corte">
+        Corte del informe:
+        <strong>{{ data.corteTexto || (data.corte | date : "fullDate") }}</strong>
+      </p>
+      <h2>Indicadores de inventarios</h2>
+    </div>
+    <div class="indicadores-acciones">
+      <button type="button" class="btn btn-outline-primary" (click)="cargar()">Actualizar</button>
+      <div class="indicadores-mes">
+      <span>{{ data.mes }}</span>
+      <small>mes actual</small>
+    </div>
+    </div>
+  </div>
+
+  <div class="indicadores-kpis">
+    <div class="kpi">
+      <small>Kg totales</small>
+      <strong>{{ data.kgTotales | number : "1.0-0" }}</strong>
+    </div>
+    <div class="kpi">
+      <small>Kg totales pollo</small>
+      <strong>{{ data.kgPollo | number : "1.0-0" }}</strong>
+    </div>
+    <div class="kpi">
+      <small>Kg totales carnes frías</small>
+      <strong>{{ data.kgCarnesFrias | number : "1.0-0" }}</strong>
+    </div>
+  </div>
+
+  <div class="indicadores-grid">
+    <div class="card">
+      <div class="card-body">
+        <h6>Porcentaje de ocupación de las bodegas</h6>
+        <div class="chart-box">
+          <canvas id="chartOcupacionBodegas"></canvas>
+        </div>
+        <div class="ocupacion-tabla">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th *ngFor="let item of data.ocupacion">{{ item.etiqueta }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Capacidad</td>
+                <td *ngFor="let item of data.ocupacion">{{ item.capacidad | number : "1.0-0" }}</td>
+              </tr>
+              <tr>
+                <td>Kg actuales</td>
+                <td *ngFor="let item of data.ocupacion">{{ item.kg | number : "1.0-0" }}</td>
+              </tr>
+              <tr>
+                <td>% ocupación</td>
+                <td *ngFor="let item of data.ocupacion" [class.over]="item.porcentaje > 100">
+                  {{ item.porcentaje ? (item.porcentaje | number : "1.0-0") + "%" : "—" }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h6>Participación por tipo de inventario</h6>
+        <div class="chart-box chart-box--pie">
+          <canvas id="chartParticipacionTipo"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-3">
+    <div class="card-body">
+      <h6>Top 10 máximo inventario de pollo</h6>
+      <div class="table-responsive">
+        <table class="table table-sm indicadores-top">
+          <thead>
+            <tr>
+              <th>Referencia</th>
+              <th>Descripción</th>
+              <th class="num">Bod. externa</th>
+              <th class="num">Cedi Norte</th>
+              <th class="num">Cedi Suroeste</th>
+              <th class="num">Cedi Urabá</th>
+              <th class="num">Prado</th>
+              <th class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of data.top10">
+              <td>{{ item.referencia }}</td>
+              <td>{{ item.descripcion }}</td>
+              <td class="num">{{ item.externa | number : "1.0-0" }}</td>
+              <td class="num">{{ item.norte | number : "1.0-0" }}</td>
+              <td class="num">{{ item.suroeste | number : "1.0-0" }}</td>
+              <td class="num">{{ item.uraba | number : "1.0-0" }}</td>
+              <td class="num">{{ item.prado | number : "1.0-0" }}</td>
+              <td class="num fw-bold">{{ item.total | number : "1.0-0" }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="spinner-wrap" *ngIf="cargando">
+  <mat-progress-spinner mode="indeterminate" diameter="48"></mat-progress-spinner>
+</div>

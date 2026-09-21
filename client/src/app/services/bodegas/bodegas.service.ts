@@ -56,5 +56,13 @@ export class BodegasService {
     return this.http.get<any>(`${this.url}/get-bodegas-inventario`);
 
   }
+
+  sincronizarSiesa(): Observable<any> {
+    return this.http.get<any>(`${this.url}/sincronizar-bodegas-siesa`);
+  }
+
+  dashboardIndicadoresInventario(): Observable<any> {
+    return this.http.get<any>(`${this.url}/dashboard-indicadores-inventario`);
+  }
   
 }
