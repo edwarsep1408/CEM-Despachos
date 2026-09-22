@@ -40,13 +40,22 @@ const textoEmpaqueInventario = (row = {}) =>
     .join(" ")
     .toUpperCase();
 
-export const esCanastillaInventario = (row = {}) =>
-  /\bCANASTILLAS?\b/.test(textoEmpaqueInventario(row));
+export const esCanastillaInventario = (row = {}) => {
+  const ref = txt(row.referencia || row.referencia_item).toUpperCase();
+  if (ref === "CANASTILLAS" || ref === "CANASTILLA") return true;
+  const desc = txt(row.descripcion || row.descripcion_item).toUpperCase();
+  return /^CANASTILLAS?$/.test(desc);
+};
 
+/** Empaque vacío (CANASTAS/CANASTILLAS), no producto tipo "MUSLO CANASTA…". */
 export const esCanastaInventario = (row = {}) => {
   if (esCanastillaInventario(row)) return true;
-  const t = textoEmpaqueInventario(row);
-  return /\bCANASTAS?\b/.test(t) || t.includes("INVCANASTA");
+  const ref = txt(row.referencia || row.referencia_item).toUpperCase();
+  if (ref === "CANASTAS" || ref === "CANASTA") return true;
+  const tipo = txt(row.tipo_inventario || row.desc_tipo_inventario).toUpperCase();
+  if (tipo.includes("INVCANASTA")) return true;
+  const desc = txt(row.descripcion || row.descripcion_item).toUpperCase();
+  return /^CANASTAS?$/.test(desc);
 };
 
 const extraerQuery = (raw) => {
@@ -62,7 +71,7 @@ const extraerQuery = (raw) => {
 
 const normalizarBaseUrl = (raw) => {
   const url = txt(raw);
-  if (!url) return "https://servicios.siesacloud.com/api/connekta/v3/ejecutarconsulta";
+  if (!url) return "https://servicios.siesacloud.com/api/connekta/v3.1/ejecutarconsulta";
   const corte = url.indexOf("?");
   return corte < 0 ? url : url.slice(0, corte);
 };
@@ -101,7 +110,10 @@ const metaPaginacion = (payload) => {
 const configExistencias = () => {
   const key = txt(process.env.SIESA_EXISTENCIAS_CONNI_KEY);
   const token = txt(process.env.SIESA_EXISTENCIAS_CONNI_TOKEN);
+  // existencias_por_bodega solo responde en v3; innova_inven_a_la_fecha_FV en v3.1
+  // incompleta (omite PT006/002/011/…). El tablero ETC usa por-bodega en v3.
   const rawUrl =
+    process.env.SIESA_EXISTENCIAS_BODEGA_BASE_URL ||
     process.env.SIESA_EXISTENCIAS_BASE_URL ||
     "https://servicios.siesacloud.com/api/connekta/v3/ejecutarconsulta";
   const query = extraerQuery(rawUrl);
@@ -385,20 +397,34 @@ const pedirPagina = async ({
         ? armarParametros(bodega, tipoInventario)
         : "";
   if (paramsTxt) params.parametros = paramsTxt;
+  const timeoutMsRetry = timeoutMs;
+  const maxIntentos = Number(process.env.SIESA_EXISTENCIAS_REINTENTOS || 3);
   let response;
-  try {
-    response = await axios.get(cfg.baseUrl, {
-      params,
-      headers: cfg.headers,
-      timeout: timeoutMs,
-    });
-  } catch (error) {
-    const payload = error.response?.data || {};
-    const detalle = typeof payload.detalle === "string" ? payload.detalle : "";
-    throw new Error(
-      detalle || payload.mensaje || error.message || "Connekta no devolvió existencias."
-    );
+  let ultimoError;
+  for (let intento = 1; intento <= maxIntentos; intento += 1) {
+    try {
+      response = await axios.get(cfg.baseUrl, {
+        params,
+        headers: cfg.headers,
+        timeout: timeoutMsRetry,
+      });
+      ultimoError = null;
+      break;
+    } catch (error) {
+      const http = error.response?.status;
+      const payload = error.response?.data || {};
+      const detalle = typeof payload.detalle === "string" ? payload.detalle : "";
+      ultimoError = new Error(
+        detalle || payload.mensaje || error.message || "Connekta no devolvió existencias."
+      );
+      if (http === 503 && intento < maxIntentos) {
+        await new Promise((r) => setTimeout(r, 800 * intento));
+        continue;
+      }
+      throw ultimoError;
+    }
   }
+  if (!response) throw ultimoError || new Error("Connekta no devolvió existencias.");
   const payload = response.data || {};
   if (payload.codigo && Number(payload.codigo) !== 0) {
     const detalle = typeof payload.detalle === "string" ? payload.detalle : "";
@@ -461,7 +487,11 @@ const descargarExistenciasPorBodega = async (bodega) => {
 
 const descargarInventarioFecha = async () => {
   const codigos = bodegasCompaniaUnicas();
-  console.log(`[existencias-siesa] ETC por bodega (${codigos.length}): ${codigos.join(", ")}`);
+  const consulta = consultaPorBodega();
+  const { baseUrl } = configExistencias();
+  console.log(
+    `[existencias-siesa] ${consulta} ETC por bodega (${codigos.length}) ${baseUrl.includes("v3.1") ? "v3.1" : "v3"}: ${codigos.join(", ")}`
+  );
   const lotes = await mapPool(codigos, 3, async (codigo) => {
     try {
       return await descargarExistenciasPorBodega(codigo);
@@ -470,7 +500,13 @@ const descargarInventarioFecha = async () => {
       return [];
     }
   });
-  return enriquecerConItems(lotes.flat());
+  const mapped = lotes.flat();
+  const kg = mapped.reduce((acc, row) => acc + kgInventarioFila(row), 0);
+  const und = mapped.reduce((acc, row) => acc + unidadesInventarioFila(row), 0);
+  console.log(
+    `[existencias-siesa] ${consulta} ETC: ${mapped.length} filas kg=${kg.toFixed(1)} und=${und.toFixed(0)}`
+  );
+  return enriquecerConItems(mapped);
 };
 
 const inventarioFecha = async () => {

@@ -63,7 +63,7 @@ const configSt = () => {
   const rawUrl =
     process.env.SIESA_ST_BASE_URL ||
     process.env.SIESA_EXISTENCIAS_BASE_URL ||
-    "https://servicios.siesacloud.com/api/connekta/v3/ejecutarconsulta";
+    "https://servicios.siesacloud.com/api/connekta/v3.1/ejecutarconsulta";
   const corte = rawUrl.indexOf("?");
   return {
     baseUrl: corte < 0 ? rawUrl : rawUrl.slice(0, corte),
