@@ -602,6 +602,8 @@ const armarParametrosFecha = (desde, hasta) => {
     return custom
       .replaceAll("{desde}", desde)
       .replaceAll("{hasta}", hasta)
+      .replaceAll("{fechaDesde}", desde)
+      .replaceAll("{fechaHasta}", hasta)
       .replaceAll("{hastaExcl}", diaSiguiente(hasta));
   }
   if (!desde) return "";
@@ -632,7 +634,9 @@ const serializarParamsConnekta = (params) =>
 const configSiesa = () => {
   const key = process.env.SIESA_PEDIDOS_CONNI_KEY || "";
   const token = process.env.SIESA_PEDIDOS_CONNI_TOKEN || "";
-  const rawUrl = process.env.SIESA_PEDIDOS_BASE_URL || "";
+  const rawUrl =
+    process.env.SIESA_PEDIDOS_BASE_URL ||
+    "https://serviciosqa.siesacloud.com/api/connekta/v3/ejecutarconsulta";
   const query = extraerQuery(rawUrl);
   return {
     baseUrl: normalizarBaseUrl(rawUrl),
@@ -644,14 +648,16 @@ const configSiesa = () => {
     consulta:
       process.env.SIESA_CONSULTA_PEDIDOS ||
       query.descripcion ||
-      "carnicosyalimentos_Detalle_pedidos",
+      "carnicosyalimentos_Detalle_pedidos_ventas",
     consultaClientes:
       process.env.SIESA_CONSULTA_CLIENTES ||
       "carnicosyalimentos_TercerosClienteDinamico",
     baseUrlClientes: normalizarBaseUrl(
       process.env.SIESA_CLIENTES_BASE_URL ||
-        "https://serviciosqa.siesacloud.com/api/connekta/v3.1/ejecutarconsulta"
+        "https://servicios.siesacloud.com/api/connekta/v3.1/ejecutarconsulta"
     ),
+    keyClientes: process.env.SIESA_CLIENTES_CONNI_KEY || key,
+    tokenClientes: process.env.SIESA_CLIENTES_CONNI_TOKEN || token,
     idCiaUnoee:
       process.env.SIESA_ID_CIA || "13",
     headers: {
@@ -665,8 +671,8 @@ const configSiesa = () => {
 };
 
 const rangoPorDefecto = () => ({
-  desde: process.env.SIESA_PEDIDOS_FECHA_DESDE || "2025-12-26",
-  hasta: process.env.SIESA_PEDIDOS_FECHA_HASTA || "2025-12-31",
+  desde: process.env.SIESA_PEDIDOS_FECHA_DESDE || "2026-01-01",
+  hasta: process.env.SIESA_PEDIDOS_FECHA_HASTA || "2026-01-31",
 });
 
 const fechaDeFila = (row) => fechaDocumentoDeFila(row);
@@ -690,10 +696,12 @@ const pedirPagina = async ({
   parametros,
   consulta: consultaOverride,
   baseUrl: baseUrlOverride,
+  headers: headersOverride,
 } = {}) => {
   const { baseUrl, idCompania, consulta, headers } = configSiesa();
   const descripcion = consultaOverride || consulta;
   const url = baseUrlOverride || baseUrl;
+  const headersReq = headersOverride || headers;
   const params = {
     idCompania,
     descripcion,
@@ -714,7 +722,7 @@ const pedirPagina = async ({
     response = await axios.get(url, {
       params,
       paramsSerializer: serializarParamsConnekta,
-      headers,
+      headers: headersReq,
       timeout: timeoutMs,
       signal: controller.signal,
       maxContentLength: Infinity,
@@ -725,7 +733,7 @@ const pedirPagina = async ({
     if (etlEstaCancelado()) throw errorEtlCancelado();
     if (error.code === "ERR_CANCELED" || error.name === "CanceledError" || error.code === "ECONNABORTED") {
       const timeoutError = new Error(
-        `SIESA no respondió a tiempo (${Math.round(elapsed / 1000)}s) en ${descripcion} página ${pagina}. La consulta SQL de Connekta está muy pesada; reduzca el rango de fechas literales en el SQL.`
+        `SIESA no respondió a tiempo (${Math.round(elapsed / 1000)}s) en ${descripcion} página ${pagina}. La consulta SQL de Connekta está muy pesada; reduzca el rango enviado en parametros (fechaDesde/fechaHasta).`
       );
       timeoutError.status = 504;
       timeoutError.consulta = descripcion;
@@ -755,7 +763,7 @@ const pedirPagina = async ({
         /converting date and\/or time from character string/i.test(detalleSiesa);
       const siesaError = new Error(
         conversionFecha
-          ? `La consulta ${descripcion} falló en Connekta al convertir una fecha (CONVERT/CAST). El calendario de la app no se envía a ese SQL. Quite CONVERT sobre {fechaDesde} o sobre f430_fecha_ts_actualizacion; deje T430.f430_id_fecha >= '2026-01-01' (literal).`
+          ? `La consulta ${descripcion} falló en Connekta (CONVERT de fecha). En el SQL use f430_id_fecha >= {fechaDesde} y <= {fechaHasta} SIN comillas ni CONVERT/CAST sobre FechaSync. Detalle: ${String(detalleSiesa).slice(0, 220)}`
           : `SIESA HTTP ${http} en ${descripcion} página ${pagina}.${extra || " La consulta falló en SQL (columna inválida) o está sobrecargada; reduce el rango de fechas en Connekta."}`
       );
       siesaError.status = 502;
@@ -1227,8 +1235,15 @@ const CACHE_CLIENTES_MS = Number(process.env.SIESA_CLIENTES_CACHE_MS || 3600000)
 const cacheClientes = { at: 0, descarga: null };
 
 const descargarClientesSiesa = async () => {
-  const { baseUrlClientes, consultaClientes, headers, idCiaUnoee } =
+  const { baseUrlClientes, consultaClientes, headers, keyClientes, tokenClientes, idCiaUnoee } =
     configSiesa();
+  const headersClientes = {
+    ...headers,
+    ConnKey: keyClientes,
+    ConnToken: tokenClientes,
+    ConniKey: keyClientes,
+    ConniToken: tokenClientes,
+  };
 
   if (cacheClientes.descarga && Date.now() - cacheClientes.at < CACHE_CLIENTES_MS) {
     console.log(
@@ -1246,9 +1261,9 @@ const descargarClientesSiesa = async () => {
     throw error;
   }
 
-  if (!headers.ConniKey || !headers.ConniToken) {
+  if (!headersClientes.ConniKey || !headersClientes.ConniToken) {
     const error = new Error(
-      "Faltan SIESA_PEDIDOS_CONNI_KEY y SIESA_PEDIDOS_CONNI_TOKEN en el .env."
+      "Faltan ConnKey/Token de clientes (SIESA_CLIENTES_CONNI_* o SIESA_PEDIDOS_CONNI_*)."
     );
     error.status = 400;
     error.consulta = consultaClientes;
@@ -1268,6 +1283,7 @@ const descargarClientesSiesa = async () => {
       pageSize,
       consulta: consultaClientes,
       baseUrl: baseUrlClientes,
+      headers: headersClientes,
     });
     if (lote.totalPaginas) {
       totalPaginas = Math.max(totalPaginas, lote.totalPaginas);

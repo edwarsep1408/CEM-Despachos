@@ -6,7 +6,7 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatSort, MatSortModule, Sort } from '@angular/material/sort';
 import { MaterialModule } from '../../material.module';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { DecimalPipe, CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
@@ -28,7 +28,6 @@ import Swal from 'sweetalert2';
   ],
   templateUrl: './panel-control-bodegas.component.html',
   styleUrl: './panel-control-bodegas.component.css',
-  providers: [DecimalPipe],
 })
 
 export class PanelControlBodegasComponent {
@@ -38,12 +37,12 @@ export class PanelControlBodegasComponent {
   public labelsLinea: any;
   public dataLinea: any;
   public productosSinInventario: any;
-  public canastas: any;
-  public canastillas: any;
+  public canastas = 0;
+  public canastillas = 0;
   public bodegaSeleccionada: {codigo: string, descripcion: string} = {codigo: 'PT001', descripcion: 'PRODUCTO TERMINADO PRADO'} ;
   public bodegas : {codigo: string , descripcion:string}[] = [];
-  public pesoTotal: any;
-  public unidadesTotales: any;
+  public pesoTotal = 0;
+  public unidadesTotales = 0;
   public chartLinea: any;
   public chartInventario: any;
   public cargando: boolean = false;
@@ -73,7 +72,6 @@ export class PanelControlBodegasComponent {
 
   constructor(
     private _bodegaService: BodegasService,
-    private decimalPipe: DecimalPipe,
     private _router: Router
   ) { }
 
@@ -106,28 +104,10 @@ export class PanelControlBodegasComponent {
           this.dataSource.data = response.body.productosSinInventario;
           this.dataSourceInventarioConCantidades.data = response.body.productosConInventario;
 
-          const canastasFormat = this.decimalPipe.transform(
-            response.body.canastas,
-            '1.0-0'
-          );
-
-          const canastillasFormat = this.decimalPipe.transform(
-            response.body.canastillas,
-            '1.0-0'
-          );
-
-          this.pesoTotal = this.decimalPipe.transform(
-            response.body.totalPeso,
-            '1.0-0'
-          );
-
-          this.unidadesTotales = this.decimalPipe.transform(
-            response.body.totalUnidades,
-            '1.0-0'
-          );
-
-          this.canastas = canastasFormat;
-          this.canastillas = canastillasFormat;
+          this.pesoTotal = Number(response.body.totalPeso) || 0;
+          this.unidadesTotales = Number(response.body.totalUnidades) || 0;
+          this.canastas = Number(response.body.canastas) || 0;
+          this.canastillas = Number(response.body.canastillas) || 0;
 
           this.onCreateChart();
           this.onCreateCharLinea();
@@ -291,15 +271,18 @@ export class PanelControlBodegasComponent {
     }
   }
 
-  onChangeBodega(bodega: string, descripcion: string) {
+  onChangeBodega(bodega?: string, descripcion?: string) {
+    const codigo = String(bodega || "").trim();
+    const nombre = String(descripcion || "").trim() || codigo;
+    if (!codigo) return;
 
-    if (bodega === 'todas') {
+    if (codigo === 'todas') {
 
       this._router.navigate(['/configuracion/inventarioTotalCompania']);
 
     } else {
       this.cargando = true;
-      this.bodegaSeleccionada = {codigo: bodega, descripcion: descripcion};
+      this.bodegaSeleccionada = { codigo, descripcion: nombre };
       this.onGetInventarioXbodega();
     }
 
@@ -326,7 +309,7 @@ export class PanelControlBodegasComponent {
     this._bodegaService.onConsultarBodegas().subscribe({
       next: (response) => {
         if (response.body) {
-          this.bodegas = response.body;
+          this.bodegas = this.ordenarBodegas(response.body);
         }
       },
       error: (error) => {
@@ -338,11 +321,28 @@ export class PanelControlBodegasComponent {
 
   get onBodegasFiltradas(){
 
-    if (!this.filtroBodega) {
-      
-      return this.bodegas;
+    const lista = !this.filtroBodega
+      ? this.bodegas
+      : this.bodegas.filter((b) =>
+          `${b.codigo} - ${b.descripcion}`.toLowerCase().includes(this.filtroBodega.toLowerCase())
+        );
+    return this.ordenarBodegas(lista);
+  }
 
-    }
-    return this.bodegas.filter(b => `${b.codigo} - ${b.descripcion}`.toLowerCase().includes(this.filtroBodega.toLowerCase())); ; 
+  private ordenarBodegas(lista: { codigo?: string; descripcion?: string }[] = []): { codigo: string; descripcion: string }[] {
+    return [...lista]
+      .map((item) => ({
+        codigo: String(item?.codigo || "").trim(),
+        descripcion: String(item?.descripcion || "").trim() || String(item?.codigo || "").trim(),
+      }))
+      .filter((item) => item.codigo)
+      .sort((a, b) => {
+      const ca = a.codigo.toUpperCase();
+      const cb = b.codigo.toUpperCase();
+      const numA = /^[0-9]/.test(ca);
+      const numB = /^[0-9]/.test(cb);
+      if (numA !== numB) return numA ? -1 : 1;
+      return ca.localeCompare(cb, "es", { sensitivity: "base" });
+    });
   }
 }

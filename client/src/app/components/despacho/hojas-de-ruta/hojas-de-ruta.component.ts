@@ -121,7 +121,7 @@ export class HojasDeRutaComponent implements OnInit {
         const filas = docs
           .map(
             (doc: any) =>
-              `<tr><td>${etiquetaPedido(doc)}</td><td>${doc.nroFactura || "—"}</td><td>${doc.cliente || ""}</td><td>${Number(doc.peso || 0).toFixed(2)}</td></tr>`
+              `<tr><td>${etiquetaPedido(doc)}</td><td>${doc.nroFactura || "—"}</td><td>${doc.cliente || ""}</td><td>${Number(doc.peso || 0).toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>`
           )
           .join("");
         const ventana = window.open("", "_blank", "width=720,height=640");

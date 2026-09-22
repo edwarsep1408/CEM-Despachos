@@ -57,7 +57,7 @@
           <td>{{ row.avance }}%</td>
           <td>{{ row.docsDesp }}/{{ row.totalDocumentos }}</td>
           <td>{{ row.undDesp }}/{{ row.undPedido }}</td>
-          <td>{{ row.pesoDesp | number : "1.1-2" }}/{{ row.pesoPedido | number : "1.1-2" }}</td>
+          <td>{{ row.pesoDesp | number : "1.2-2" }}/{{ row.pesoPedido | number : "1.2-2" }}</td>
         </tr>
         <tr *ngIf="!visibles.length">
           <td colspan="9" class="text-muted py-3">No hay cargues enviados a piso.</td>

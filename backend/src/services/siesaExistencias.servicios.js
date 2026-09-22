@@ -1,5 +1,6 @@
 import axios from "axios";
 import itemsModel from "../models/items.models";
+import { BODEGAS_GRUPO_ETC, normalizarCodigoBodega, setBodegasCompania } from "../data/bodegasGrupoEtc";
 
 const txt = (valor) => String(valor ?? "").trim();
 
@@ -24,6 +25,28 @@ const num = (valor) => {
   if (typeof valor === "number") return Number.isFinite(valor) ? valor : 0;
   const n = Number(String(valor).trim().replace(/\s/g, "").replace(",", "."));
   return Number.isFinite(n) ? n : 0;
+};
+
+const textoEmpaqueInventario = (row = {}) =>
+  [
+    row.descripcion,
+    row.descripcion_item,
+    row.referencia,
+    row.referencia_item,
+    row.tipo_inventario,
+    row.desc_tipo_inventario,
+  ]
+    .map(txt)
+    .join(" ")
+    .toUpperCase();
+
+export const esCanastillaInventario = (row = {}) =>
+  /\bCANASTILLAS?\b/.test(textoEmpaqueInventario(row));
+
+export const esCanastaInventario = (row = {}) => {
+  if (esCanastillaInventario(row)) return true;
+  const t = textoEmpaqueInventario(row);
+  return /\bCANASTAS?\b/.test(t) || t.includes("INVCANASTA");
 };
 
 const extraerQuery = (raw) => {
@@ -119,24 +142,28 @@ export const bodegasCompania = () => {
   if (crudo) {
     return crudo.split(",").map((codigo) => codigo.trim()).filter(Boolean);
   }
-  return [
-    "002",
-    "PT001",
-    "PT003",
-    "PT002",
-    "001",
-    "BM004",
-    "008",
-    "PT004",
-    "PT0PV",
-    "009",
-    "BM002",
-    "BM001",
-    "011",
-    "BM003",
-    "PT006",
-  ];
+  return [...BODEGAS_GRUPO_ETC];
 };
+
+export const bodegasCompaniaUnicas = () => {
+  const vistos = new Set();
+  const lista = [];
+  for (const codigo of bodegasCompania()) {
+    const clave = normalizarCodigoBodega(codigo);
+    if (!clave || vistos.has(clave)) continue;
+    vistos.add(clave);
+    lista.push(codigo);
+  }
+  return lista;
+};
+
+export const esBodegaCompania = (codigo, permitidas) => {
+  const set = permitidas || setBodegasCompania(bodegasCompania());
+  return set.has(normalizarCodigoBodega(codigo));
+};
+
+export const esStInventarioCompania = (row = {}) =>
+  esBodegaCompania(row.codigo_bodega_ent) || esBodegaCompania(row.codigo_bodega_sal);
 
 export const mapExistencia = (row = {}) => {
   const un =
@@ -144,6 +171,8 @@ export const mapExistencia = (row = {}) => {
     null;
   const cantidad = num(
     pick(row, [
+      "Disponible",
+      "disponible",
       "Existencia",
       "Existencia_1",
       "existencia_1",
@@ -170,8 +199,22 @@ export const mapExistencia = (row = {}) => {
     ])
   );
   const esUnd = /^(und|unid)/i.test(un || "");
-  return {
-  referencia: txt(
+  const codigoBodega = txt(
+    pick(row, ["IdBodega", "codigo_bodega", "f150_id", "id_bodega", "bodega"])
+  );
+  const desc = txt(
+    pick(row, [
+      "DescItem",
+      "descripcion",
+      "f120_descripcion",
+      "desc_item",
+      "descripcion_item",
+    ])
+  ).toUpperCase();
+  const tipoInv = txt(
+    pick(row, ["tipo_inventario", "id_tipo_inventario", "tipoinventario", "f121_id_ext1_detalle"])
+  );
+  const referencia = txt(
     pick(row, [
       "Referencia",
       "referencia",
@@ -181,7 +224,15 @@ export const mapExistencia = (row = {}) => {
       "id_item",
       "item",
     ])
-  ),
+  );
+  const esCanasta = esCanastaInventario({
+    descripcion: desc,
+    referencia,
+    tipo_inventario: tipoInv,
+  });
+  const cantidadCanasta = esCanasta ? (unidades > 0 ? unidades : cantidad > 0 ? cantidad : 0) : 0;
+  return {
+  referencia,
   descripcion: txt(
     pick(row, [
       "DescItem",
@@ -192,9 +243,7 @@ export const mapExistencia = (row = {}) => {
     ])
   ),
   id_item: txt(pick(row, ["IdItem", "id_item", "codigo_item", "f120_id"])),
-  codigo_bodega: txt(
-    pick(row, ["IdBodega", "codigo_bodega", "f150_id", "id_bodega", "bodega"])
-  ),
+  codigo_bodega: codigoBodega,
   descripcion_bodega: txt(
     pick(row, [
       "NomBodega",
@@ -206,12 +255,11 @@ export const mapExistencia = (row = {}) => {
   ),
   unidad_medida_1: un,
   unidad_medida_2: txt(pick(row, ["unidad_medida_2", "f120_id_unidad_adicional", "um2", "unidad2"])) || null,
-  Existencia_1: unidades ? (esUnd ? 0 : cantidad) : esUnd ? 0 : cantidad,
-  Existencia_2: unidades || (esUnd ? cantidad : 0),
+  Existencia_1: esCanasta || esUnd ? 0 : cantidad,
+  Existencia_2: esCanasta ? 0 : unidades || (esUnd ? cantidad : 0),
+  cantidad_canasta: cantidadCanasta,
   abc_rotacion_veces: pick(row, ["abc_rotacion_veces", "abc", "rotacion"]) || 0,
-  tipo_inventario: txt(
-    pick(row, ["tipo_inventario", "id_tipo_inventario", "tipoinventario", "f121_id_ext1_detalle"])
-  ),
+  tipo_inventario: tipoInv,
   desc_tipo_inventario: txt(pick(row, ["desc_tipo_inventario", "desctipoinventario"])) || "",
   id_linea: txt(pick(row, ["id_linea", "f120_id_linea"])) || null,
   descripcion_linea: txt(pick(row, ["descripcion_linea", "desc_linea", "linea_descripcion"])) || null,
@@ -304,7 +352,20 @@ const armarParametros = (bodega, tipoInventario, plantilla) => {
 const CACHE_MS = Number(process.env.SIESA_EXISTENCIAS_CACHE_MS || 120000);
 let cacheInventario = { at: 0, mapped: null, promise: null };
 
-const pedirPagina = async ({ bodega, tipoInventario, pagina, pageSize }) => {
+/** SQL: backend/src/services/siesaExistencias.consulta.sql (pegar en Connekta). */
+const consultaPorBodega = () =>
+  txt(process.env.SIESA_CONSULTA_EXISTENCIAS_BODEGA) ||
+  txt(process.env.SIESA_CONSULTA_EXISTENCIAS_UNIDADES) ||
+  "carnicosyalimentos_existencias_por_bodega";
+
+const pedirPagina = async ({
+  bodega,
+  tipoInventario,
+  pagina,
+  pageSize,
+  consulta,
+  parametros,
+} = {}) => {
   const cfg = configExistencias();
   if (!cfg.key || !cfg.token) {
     throw new Error(
@@ -314,12 +375,16 @@ const pedirPagina = async ({ bodega, tipoInventario, pagina, pageSize }) => {
   const timeoutMs = Number(process.env.SIESA_EXISTENCIAS_TIMEOUT_MS || 60000);
   const params = {
     idCompania: cfg.idCompania,
-    descripcion: cfg.consulta,
+    descripcion: consulta || cfg.consulta,
     paginacion: `numPag=${pagina}|tamPag=${pageSize}`,
   };
-  if (cfg.usaParametros) {
-    params.parametros = armarParametros(bodega, tipoInventario);
-  }
+  const paramsTxt =
+    parametros != null
+      ? parametros
+      : cfg.usaParametros
+        ? armarParametros(bodega, tipoInventario)
+        : "";
+  if (paramsTxt) params.parametros = paramsTxt;
   let response;
   try {
     response = await axios.get(cfg.baseUrl, {
@@ -342,28 +407,70 @@ const pedirPagina = async ({ bodega, tipoInventario, pagina, pageSize }) => {
   return { filas: extraerFilas(payload), meta: metaPaginacion(payload) };
 };
 
-const descargarInventarioFecha = async () => {
-  const { consulta } = configExistencias();
+const mapPool = async (items, limit, fn) => {
+  const out = new Array(items.length);
+  let indice = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) || 0 }, async () => {
+    while (indice < items.length) {
+      const actual = indice;
+      indice += 1;
+      out[actual] = await fn(items[actual]);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+};
+
+const descargarExistenciasPorBodega = async (bodega) => {
+  const codigo = txt(bodega);
+  if (!codigo) return [];
+  const consulta = consultaPorBodega();
   const pageSize = Number(process.env.SIESA_EXISTENCIAS_TAM_PAG || 100);
   const maxPaginas = Number(process.env.SIESA_EXISTENCIAS_MAX_PAGINAS || 80);
+  const parametros = `bodega = ${codigo}|tipoinventario = `;
   const filas = [];
   let totalPaginas = 1;
   for (let pagina = 1; pagina <= maxPaginas; pagina += 1) {
-    const { filas: page, meta } = await pedirPagina({ pagina, pageSize });
-    if (meta.totalPaginas) totalPaginas = meta.totalPaginas;
-    filas.push(...page);
-    if (!page.length || pagina >= totalPaginas || page.length < pageSize) break;
+    const lote = await pedirPagina({
+      pagina,
+      pageSize,
+      consulta,
+      parametros,
+    });
+    if (lote.meta.totalPaginas) totalPaginas = lote.meta.totalPaginas;
+    filas.push(...lote.filas);
+    if (!lote.filas.length || pagina >= totalPaginas || lote.filas.length < pageSize) break;
   }
-  if (filas[0] && typeof filas[0] === "object") {
-    console.log(
-      `[existencias-siesa] ${consulta} columnas: ${Object.keys(filas[0]).join(", ")}`
+  const mapped = filas
+    .map(mapExistencia)
+    .filter((row) => row.referencia || row.descripcion)
+    .filter(
+      (row) =>
+        num(row.Existencia_1) > 0 ||
+        num(row.Existencia_2) > 0 ||
+        num(row.cantidad_canasta) > 0
     );
-  }
-  const mapped = await enriquecerConItems(
-    filas.map(mapExistencia).filter((row) => row.referencia || row.descripcion)
+  const kg = mapped.reduce((acc, row) => acc + kgInventarioFila(row), 0);
+  const und = mapped.reduce((acc, row) => acc + unidadesInventarioFila(row), 0);
+  const empaque = totalCanastasEtc(mapped);
+  console.log(
+    `[existencias-siesa] ${consulta} ${codigo}: ${mapped.length} filas kg=${kg.toFixed(1)} und=${und.toFixed(0)} canastas=${empaque.canastas} canastillas=${empaque.canastillas}`
   );
-  console.log(`[existencias-siesa] ${consulta}: ${mapped.length} filas`);
   return mapped;
+};
+
+const descargarInventarioFecha = async () => {
+  const codigos = bodegasCompaniaUnicas();
+  console.log(`[existencias-siesa] ETC por bodega (${codigos.length}): ${codigos.join(", ")}`);
+  const lotes = await mapPool(codigos, 3, async (codigo) => {
+    try {
+      return await descargarExistenciasPorBodega(codigo);
+    } catch (error) {
+      console.error(`[existencias-siesa] ${codigo}:`, error.message);
+      return [];
+    }
+  });
+  return enriquecerConItems(lotes.flat());
 };
 
 const inventarioFecha = async () => {
@@ -385,12 +492,54 @@ const inventarioFecha = async () => {
   return cacheInventario.promise;
 };
 
+export const cantidadCanastaFila = (row = {}) => {
+  if (!esCanastaInventario(row)) return 0;
+  const dedicada = num(row.cantidad_canasta);
+  if (dedicada > 0) return dedicada;
+  const unidades = num(row.Existencia_2);
+  if (unidades > 0) return unidades;
+  const kg = num(row.Existencia_1);
+  return kg > 0 ? kg : 0;
+};
+
+export const kgInventarioFila = (row = {}) => {
+  if (esCanastaInventario(row)) return 0;
+  const kg = num(row.Existencia_1);
+  return kg > 0 ? kg : 0;
+};
+
+export const unidadesInventarioFila = (row = {}) => {
+  if (esCanastaInventario(row)) return 0;
+  const un = txt(row.unidad_medida_1);
+  if (/^(und|unid)/i.test(un)) return 0;
+  const und = num(row.Existencia_2);
+  return und > 0 ? und : 0;
+};
+
+export const totalKgEtc = (filas = []) =>
+  filas.reduce((acc, row) => acc + kgInventarioFila(row), 0);
+
+export const totalUnidadesEtc = (filas = []) =>
+  filas.reduce((acc, row) => acc + unidadesInventarioFila(row), 0);
+
+export const totalCanastasEtc = (filas = []) =>
+  filas.reduce(
+    (acc, row) => {
+      const cant = cantidadCanastaFila(row);
+      if (!(cant > 0)) return acc;
+      if (esCanastillaInventario(row)) acc.canastillas += cant;
+      else acc.canastas += cant;
+      return acc;
+    },
+    { canastas: 0, canastillas: 0 }
+  );
+
 export const consultarExistenciasPorBodega = async (bodega, { log = true } = {}) => {
   const codigo = txt(bodega);
   if (!codigo) return [];
   const mapped = await inventarioFecha();
   const filas = mapped.filter(
-    (row) => txt(row.codigo_bodega).toUpperCase() === codigo.toUpperCase()
+    (row) => normalizarCodigoBodega(row.codigo_bodega) === normalizarCodigoBodega(codigo)
   );
   if (log) {
     console.log(`[existencias-siesa] bodega ${codigo}: ${filas.length} filas`);
@@ -400,12 +549,23 @@ export const consultarExistenciasPorBodega = async (bodega, { log = true } = {})
 
 export const consultarExistenciasCompania = async (codigos) => {
   const mapped = await inventarioFecha();
-  const lista = (codigos || []).map((codigo) => txt(codigo).toUpperCase()).filter(Boolean);
-  const filas = lista.length
-    ? mapped.filter((row) => lista.includes(txt(row.codigo_bodega).toUpperCase()))
-    : mapped;
-  const { consulta } = configExistencias();
-  console.log(`[existencias-siesa] ${consulta} compania: ${filas.length} filas`);
+  const lista = (codigos && codigos.length ? codigos : bodegasCompaniaUnicas())
+    .map(normalizarCodigoBodega)
+    .filter(Boolean);
+  const permitidas = setBodegasCompania(lista);
+  const filas = mapped.filter((row) => permitidas.has(normalizarCodigoBodega(row.codigo_bodega)));
+  const porBodega = {};
+  for (const row of filas) {
+    const codigo = txt(row.codigo_bodega) || "(vacio)";
+    if (!porBodega[codigo]) porBodega[codigo] = { filas: 0, kg: 0, und: 0 };
+    porBodega[codigo].filas += 1;
+    porBodega[codigo].kg += kgInventarioFila(row);
+    porBodega[codigo].und += unidadesInventarioFila(row);
+  }
+  console.log(
+    `[existencias-siesa] ETC por bodega compañia: ${filas.length}/${mapped.length} filas (${lista.length} bodegas)`,
+    porBodega
+  );
   return filas;
 };
 
@@ -430,4 +590,15 @@ export default {
   mapExistencia,
   fuenteExistenciasCem,
   bodegasCompania,
+  bodegasCompaniaUnicas,
+  esBodegaCompania,
+  esStInventarioCompania,
+  esCanastaInventario,
+  esCanastillaInventario,
+  cantidadCanastaFila,
+  kgInventarioFila,
+  unidadesInventarioFila,
+  totalKgEtc,
+  totalUnidadesEtc,
+  totalCanastasEtc,
 };

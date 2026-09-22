@@ -14,9 +14,13 @@ import Swal from 'sweetalert2';
 })
 export class DashboardIndicadoresComponent implements AfterViewInit, OnDestroy {
   cargando = false;
+  transitoCargando = false;
+  private transitoEstable = false;
   data: any = null;
   private chartOcupacion: any = null;
   private chartParticipacion: any = null;
+  private transitoTimer: ReturnType<typeof setTimeout> | null = null;
+  private transitoIntentos = 0;
 
   constructor(private bodegas: BodegasService) {}
 
@@ -26,14 +30,19 @@ export class DashboardIndicadoresComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destruirCharts();
+    this.limpiarTransitoTimer();
   }
 
   cargar(): void {
     this.cargando = true;
+    this.limpiarTransitoTimer();
+    this.transitoIntentos = 0;
+    this.transitoEstable = false;
     this.bodegas.dashboardIndicadoresInventario().subscribe({
       next: (response) => {
         this.cargando = false;
         this.data = response.body || null;
+        this.aplicarTransito(this.data);
         setTimeout(() => this.pintarCharts());
       },
       error: (error) => {
@@ -45,6 +54,67 @@ export class DashboardIndicadoresComponent implements AfterViewInit, OnDestroy {
         });
       },
     });
+  }
+
+  private aplicarTransito(body: any): void {
+    if (!this.data) return;
+    const transito = body?.transito || this.data.transito || {};
+    const enCurso = Boolean(transito.enCurso);
+    const redondearKg = (valor: number) => Math.round(Number(valor || 0) * 100) / 100;
+    const kgTransito = redondearKg(Number(body?.kgTransito ?? body?.totales?.totalKgMovimiento ?? 0) || 0);
+    const kgBodega = redondearKg(Number(this.data.kgBodega ?? this.data.kgTotales ?? 0) || 0);
+    const undTransito = Number(body?.unidadesTransito ?? body?.totales?.totalUnidadesMovimiento ?? this.data.unidadesTransito ?? 0) || 0;
+    const undBodega = Number(this.data.unidadesBodega ?? 0) || 0;
+    const pintar = !enCurso || !this.transitoEstable;
+    if (pintar) {
+      this.data = {
+        ...this.data,
+        kgBodega,
+        kgTransito,
+        kgConTransito: redondearKg(kgBodega + kgTransito),
+        unidadesBodega: Math.round(undBodega),
+        unidadesTransito: Math.round(undTransito),
+        unidadesConTransito: Math.round(undBodega + undTransito),
+        transito,
+      };
+      this.transitoEstable = true;
+    } else {
+      this.data = { ...this.data, transito };
+    }
+    this.transitoCargando = enCurso;
+    if (enCurso && this.transitoIntentos < 150) {
+      this.programarRefrescoTransito();
+    }
+  }
+
+  private programarRefrescoTransito(): void {
+    this.limpiarTransitoTimer();
+    this.transitoIntentos += 1;
+    this.transitoTimer = setTimeout(() => this.consultarTransito(), 4000);
+  }
+
+  private consultarTransito(): void {
+    this.bodegas.consultarInventarioTransito().subscribe({
+      next: (response) => {
+        if (response.body) this.aplicarTransito({
+          kgTransito: response.body.totales?.totalKgMovimiento,
+          unidadesTransito: response.body.totales?.totalUnidadesMovimiento,
+          transito: response.body.transito,
+        });
+      },
+      error: () => {
+        if (this.transitoCargando && this.transitoIntentos < 150) {
+          this.programarRefrescoTransito();
+        }
+      },
+    });
+  }
+
+  private limpiarTransitoTimer(): void {
+    if (this.transitoTimer) {
+      clearTimeout(this.transitoTimer);
+      this.transitoTimer = null;
+    }
   }
 
   private destruirCharts(): void {
@@ -84,8 +154,18 @@ export class DashboardIndicadoresComponent implements AfterViewInit, OnDestroy {
             legend: { position: 'bottom' },
           },
           layout: { padding: { top: 20 } },
+          locale: 'es-CO',
           scales: {
-            y: { beginAtZero: true },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: (value: string | number) =>
+                  Number(value).toLocaleString('es-CO', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  }),
+              },
+            },
           },
         },
         plugins: [
@@ -132,6 +212,7 @@ export class DashboardIndicadoresComponent implements AfterViewInit, OnDestroy {
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          locale: 'es-CO',
           plugins: {
             legend: {
               position: 'bottom',
@@ -141,7 +222,7 @@ export class DashboardIndicadoresComponent implements AfterViewInit, OnDestroy {
                   return (chart.data.labels || []).map((label, i) => {
                     const item = participacion[i] || {};
                     return {
-                      text: `${label} ${Number(item.kg || 0).toLocaleString('es-CO')} · ${item.porcentaje || 0}%`,
+                      text: `${label} ${Number(item.kg || 0).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · ${item.porcentaje || 0}%`,
                       fillStyle: Array.isArray(dataset.backgroundColor)
                         ? dataset.backgroundColor[i]
                         : dataset.backgroundColor,

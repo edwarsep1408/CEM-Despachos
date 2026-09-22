@@ -57,6 +57,7 @@
         <tr *ngFor="let row of visibles">
           <td class="acciones-cell">
             <button type="button" class="btn-link-accion" (click)="abrirEditar(row)">[editar]</button>
+            <button type="button" class="btn-link-accion" (click)="eliminar(row)">[Eliminar]</button>
           </td>
           <td>{{ row.idVehiculo }}</td>
           <td>{{ row.conductor }}</td>

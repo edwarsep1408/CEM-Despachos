@@ -1,13 +1,28 @@
 import carguesModel from "../models/cargues.models";
 import pedidosModel from "../models/pedidos.models";
 import reaproModel from "../models/reaprovisionamientos.models";
+import ordenesModel from "../models/ordenesCompra.models";
 
 const norm = (estado) => String(estado || "").trim().toLowerCase();
 
+const tipoDocUp = (doc) => String(doc?.tipo || doc?.tipoDoc || "").toUpperCase();
+
 const esReapro = (doc) => {
-  const tipo = String(doc?.tipo || doc?.tipoDoc || "").toUpperCase();
+  const tipo = tipoDocUp(doc);
   return tipo === "REAPRO" || tipo.includes("REAPRO");
 };
+
+const esOc = (doc) => {
+  const tipo = tipoDocUp(doc);
+  return tipo === "OC" || tipo.includes("COMPRA") || tipo === "ORDEN";
+};
+
+const esTransito = (doc) => {
+  const tipo = tipoDocUp(doc);
+  return tipo === "TRANSITO" || tipo === "ST";
+};
+
+const esPedidoMongo = (doc) => !esReapro(doc) && !esOc(doc) && !esTransito(doc);
 
 export const esAprobado = (estado) => norm(estado) === "aprobado";
 
@@ -110,6 +125,7 @@ export const mapaCarguesActivos = async () => {
         idCargue: cargue.idCargue,
         despachado: esDespachadoDoc(doc),
         reapro: esReapro(doc),
+        oc: esOc(doc),
       });
     }
   }
@@ -146,8 +162,9 @@ export const aplicarCargueAReapro = (doc, info) => {
 
 export const marcarOrigenesEnCargue = async (documentos, idCargue) => {
   const id = Number(idCargue) || idCargue;
-  const pedidos = idEncsDe(documentos, (doc) => !esReapro(doc));
+  const pedidos = idEncsDe(documentos, esPedidoMongo);
   const reapros = idEncsDe(documentos, esReapro);
+  const ocs = idEncsDe(documentos, esOc);
   const ahora = new Date();
   if (pedidos.length) {
     await pedidosModel.updateMany(
@@ -164,11 +181,18 @@ export const marcarOrigenesEnCargue = async (documentos, idCargue) => {
       { $set: { estado: "despachando", idCargue: id, fecha_actualizacion: ahora } }
     );
   }
+  if (ocs.length) {
+    await ordenesModel.updateMany(
+      { idEnc: { $in: ocs }, estado: { $nin: ["anulado", "despachado"] } },
+      { $set: { estado: "despachando", idCargue: id, fecha_actualizacion: ahora } }
+    );
+  }
 };
 
 export const soltarOrigenesDeCargue = async (documentos) => {
-  const pedidos = idEncsDe(documentos, (doc) => !esReapro(doc));
+  const pedidos = idEncsDe(documentos, esPedidoMongo);
   const reapros = idEncsDe(documentos, esReapro);
+  const ocs = idEncsDe(documentos, esOc);
   const ahora = new Date();
   if (pedidos.length) {
     const docs = await pedidosModel
@@ -199,6 +223,12 @@ export const soltarOrigenesDeCargue = async (documentos) => {
       { $set: { estado: "aprobado", idCargue: null, fecha_actualizacion: ahora } }
     );
   }
+  if (ocs.length) {
+    await ordenesModel.updateMany(
+      { idEnc: { $in: ocs }, estado: "despachando" },
+      { $set: { estado: "aprobado", idCargue: null, fecha_actualizacion: ahora } }
+    );
+  }
 };
 
 export const marcarOrigenDespachando = async (doc, idCargue) => {
@@ -218,6 +248,20 @@ export const marcarOrigenDespachando = async (doc, idCargue) => {
     );
     return;
   }
+  if (esOc(doc)) {
+    await ordenesModel.updateOne(
+      { idEnc, estado: "despachado" },
+      {
+        $set: {
+          estado: "despachando",
+          idCargue: id,
+          fecha_actualizacion: new Date(),
+        },
+      }
+    );
+    return;
+  }
+  if (esTransito(doc)) return;
   await pedidosModel.updateOne(
     { idEnc, estado: { $regex: /^despachado$/i } },
     { $set: { estado: "Despachando", idCargue: id } }
@@ -241,6 +285,20 @@ export const marcarOrigenDespachado = async (doc, idCargue) => {
     );
     return;
   }
+  if (esOc(doc)) {
+    await ordenesModel.updateOne(
+      { idEnc, estado: { $ne: "anulado" } },
+      {
+        $set: {
+          estado: "despachado",
+          idCargue: id,
+          fecha_actualizacion: new Date(),
+        },
+      }
+    );
+    return;
+  }
+  if (esTransito(doc)) return;
   await pedidosModel.updateOne(
     {
       idEnc,
@@ -255,9 +313,23 @@ export const restaurarEstadosDesdeCargues = async () => {
   if (!mapa.size) return 0;
   const opsPedidos = [];
   const opsReapro = [];
+  const opsOc = [];
   for (const [idEnc, info] of mapa.entries()) {
     if (info.reapro) {
       opsReapro.push({
+        updateOne: {
+          filter: { idEnc, estado: { $ne: "anulado" } },
+          update: {
+            $set: {
+              estado: info.despachado ? "despachado" : "despachando",
+              idCargue: info.idCargue,
+              fecha_actualizacion: new Date(),
+            },
+          },
+        },
+      });
+    } else if (info.oc) {
+      opsOc.push({
         updateOne: {
           filter: { idEnc, estado: { $ne: "anulado" } },
           update: {
@@ -289,6 +361,7 @@ export const restaurarEstadosDesdeCargues = async () => {
   }
   if (opsPedidos.length) await pedidosModel.bulkWrite(opsPedidos);
   if (opsReapro.length) await reaproModel.bulkWrite(opsReapro);
+  if (opsOc.length) await ordenesModel.bulkWrite(opsOc);
   return mapa.size;
 };
 

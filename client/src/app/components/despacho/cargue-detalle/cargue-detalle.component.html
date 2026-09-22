@@ -68,7 +68,7 @@
       </tbody>
     </table>
   </div>
-  <p class="small mt-2 mb-0"><strong>Total (peso) = {{ totalPeso }}</strong> · {{ documentos.length }} registros</p>
+  <p class="small mt-2 mb-0"><strong>Total (peso) = {{ totalPeso | number:'1.2-2' }}</strong> · {{ documentos.length }} registros</p>
 </div>
 
 <div class="cargue-panel" *ngIf="panelAbierto">
@@ -240,8 +240,180 @@
       </div>
     </ng-container>
 
-    <p class="text-muted mb-0 p-3" *ngIf="panelTipo !== 'PEDIDO' && panelTipo !== 'REAPRO'">
-      Este catálogo aún no está sincronizado. Queda listo el punto de entrada; cuando exista el origen se filtrará igual: solo documentos aprobados de la bodega del despachador.
-    </p>
+    <ng-container *ngIf="panelTipo === 'TRANSITO'">
+      <div class="cargue-panel-filtros">
+        <label>Desde
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.desde" (ngModelChange)="aplicarFiltros()">
+        </label>
+        <label>Hasta
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.hasta" (ngModelChange)="aplicarFiltros()">
+        </label>
+        <label>Nº ST
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.pedido" (ngModelChange)="aplicarFiltros()">
+        </label>
+        <label>Destino
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.cliente" (ngModelChange)="aplicarFiltros()">
+        </label>
+      </div>
+
+      <p class="small text-muted px-3 mb-2" *ngIf="consultaStEnCurso && cargandoDisponibles">
+        Consultando ST abiertas en SIESA… puede tardar uno o dos minutos la primera vez.
+      </p>
+
+      <div class="cargue-panel-acciones">
+        <span>Seleccionar:</span>
+        <button type="button" class="btn-link-accion" (click)="todosDisponibles()">Todos</button>
+        <button type="button" class="btn-link-accion" (click)="ningunoDisponibles()">Ninguno</button>
+        <button type="button" class="btn btn-primary btn-sm" (click)="agregarSeleccionados()">Agregar ST marcadas</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" (click)="agregarTodos()">Agregar todas</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cargarStDisponibles(true)">Actualizar desde SIESA</button>
+      </div>
+
+      <div *ngIf="cargandoDisponibles && !disponibles.length" class="text-muted small py-4 px-3">Cargando ST…</div>
+      <div class="cargue-panel-lista" *ngIf="!cargandoDisponibles || disponibles.length">
+        <table class="table table-sm mb-0 cargue-picker">
+          <thead>
+            <tr>
+              <th></th>
+              <th>ST</th>
+              <th>FECHA</th>
+              <th>DESTINO</th>
+              <th>OBSERVACIÓN</th>
+              <th>PESO (kg)</th>
+              <th>UND</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let item of paginaItems"
+              [class.is-selected]="seleccionDisponibles.has(item.idEnc)"
+              (click)="toggleDisponible(item.idEnc)"
+            >
+              <td (click)="$event.stopPropagation()">
+                <input type="checkbox" [checked]="seleccionDisponibles.has(item.idEnc)" (change)="toggleDisponible(item.idEnc)">
+              </td>
+              <td>{{ etiquetaPedido(item) }}</td>
+              <td>{{ item.fecha || "—" }}</td>
+              <td>{{ item.cliente || "—" }}</td>
+              <td class="celda-obs">{{ item.observacion || "—" }}</td>
+              <td>{{ item.peso | number : "1.2-2" }}</td>
+              <td>{{ item.unidades | number : "1.0-0" }}</td>
+            </tr>
+            <tr *ngIf="!paginaItems.length && !cargandoDisponibles">
+              <td colspan="7" class="text-muted py-3">
+                No hay ST abiertas con saldo pendiente para la bodega {{ cargue?.bodega }}.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="cargue-panel-foot">
+        <div class="small text-muted">
+          Página {{ pagina }} de {{ totalPaginas }} · Total: {{ disponiblesFiltrados.length }} registros
+          <span *ngIf="seleccionCount"> · {{ seleccionCount }} marcadas · {{ seleccionPeso | number : "1.2-2" }} kg</span>
+        </div>
+        <div class="d-flex gap-1">
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(1)" [disabled]="pagina === 1">&lt;&lt;</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(pagina - 1)" [disabled]="pagina === 1">&lt;</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(pagina + 1)" [disabled]="pagina === totalPaginas">&gt;</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(totalPaginas)" [disabled]="pagina === totalPaginas">&gt;&gt;</button>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="panelTipo === 'OC'">
+      <div class="cargue-panel-filtros">
+        <label>Desde
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.desde" (ngModelChange)="aplicarFiltros()">
+        </label>
+        <label>Hasta
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.hasta" (ngModelChange)="aplicarFiltros()">
+        </label>
+        <label>Nº OC
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.pedido" (ngModelChange)="aplicarFiltros()">
+        </label>
+        <label>Tienda / producto / GLN
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.cliente" (ngModelChange)="aplicarFiltros()">
+        </label>
+      </div>
+
+      <div class="cargue-panel-acciones">
+        <span>Seleccionar:</span>
+        <button type="button" class="btn-link-accion" (click)="todosDisponibles()">Todos</button>
+        <button type="button" class="btn-link-accion" (click)="ningunoDisponibles()">Ninguno</button>
+        <button type="button" class="btn btn-primary btn-sm" (click)="agregarSeleccionados()">Agregar OC marcadas</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" (click)="agregarTodos()">Agregar todas</button>
+      </div>
+
+      <div *ngIf="cargandoDisponibles" class="text-muted small py-4 px-3">Cargando órdenes de compra…</div>
+      <div class="cargue-panel-lista" *ngIf="!cargandoDisponibles">
+        <table class="table table-sm mb-0 cargue-picker">
+          <thead>
+            <tr>
+              <th></th>
+              <th>OC</th>
+              <th>FECHA</th>
+              <th>TIENDA</th>
+              <th>PRODUCTOS</th>
+              <th>CANT</th>
+              <th>UND</th>
+              <th>VALOR</th>
+              <th>OBS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let item of paginaItems"
+              [class.is-selected]="seleccionDisponibles.has(item.idEnc)"
+              (click)="toggleDisponible(item.idEnc)"
+            >
+              <td (click)="$event.stopPropagation()">
+                <input type="checkbox" [checked]="seleccionDisponibles.has(item.idEnc)" (change)="toggleDisponible(item.idEnc)">
+              </td>
+              <td>
+                <div>{{ etiquetaPedido(item) }}</div>
+                <div class="small text-muted">{{ item.nroDoc || "" }}</div>
+              </td>
+              <td>
+                <div>{{ item.fecha || "—" }}</div>
+                <div class="small text-muted" *ngIf="item.fechaEntregaDesde || item.fechaEntregaHasta">
+                  ent. {{ item.fechaEntregaDesde || "?" }} → {{ item.fechaEntregaHasta || "?" }}
+                </div>
+              </td>
+              <td>
+                <div>{{ item.nombreEstablecimiento || item.cliente || item.establecimiento || "—" }}</div>
+                <div class="small text-muted" *ngIf="item.razonSocial">{{ item.razonSocial }}</div>
+                <div class="small text-muted">GLN {{ item.glnEntrega || item.nit || "—" }}</div>
+              </td>
+              <td class="celda-obs">
+                <div>{{ item.productosResumen || "—" }}</div>
+                <div class="small text-muted">{{ item.totalLineas || item.lineas?.length || 0 }} línea(s)</div>
+              </td>
+              <td>{{ (item.cantidad || item.unidades || item.peso || 0) | number : "1.0-2" }}</td>
+              <td>{{ item.unidadesPedido || "—" }}</td>
+              <td>{{ item.valor | number : "1.0-0" }}</td>
+              <td class="celda-obs">{{ item.observacion || "—" }}</td>
+            </tr>
+            <tr *ngIf="!paginaItems.length">
+              <td colspan="9" class="text-muted py-3">
+                No hay OC libres para la bodega {{ cargue?.bodega }}. Cárguelas en Despacho → Órdenes de compra.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="cargue-panel-foot">
+        <div class="small text-muted">
+          Página {{ pagina }} de {{ totalPaginas }} · Total: {{ disponiblesFiltrados.length }} registros
+          <span *ngIf="seleccionCount"> · {{ seleccionCount }} marcadas</span>
+        </div>
+        <div class="d-flex gap-1">
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(1)" [disabled]="pagina === 1">&lt;&lt;</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(pagina - 1)" [disabled]="pagina === 1">&lt;</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(pagina + 1)" [disabled]="pagina === totalPaginas">&gt;</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(totalPaginas)" [disabled]="pagina === totalPaginas">&gt;&gt;</button>
+        </div>
+      </div>
+    </ng-container>
   </div>
 </div>

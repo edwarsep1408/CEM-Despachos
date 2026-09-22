@@ -1,0 +1,118 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bx-barcode page-banner-icon"></i>
+    <div>
+      <h1>Códigos EAN</h1>
+      <p>Relación EAN de cadena → referencia CEM (para órdenes de compra EDI).</p>
+    </div>
+  </div>
+</div>
+
+<div class="despacho-modulo despacho-modulo--wide">
+  <div class="cargues-acciones d-flex flex-wrap gap-2 align-items-center">
+    <button type="button" class="cargues-link" (click)="abrirNuevo()">Agregar</button>
+    <label class="cargues-link mb-0">
+      {{ importando ? "Importando…" : "Importar CSV" }}
+      <input type="file" accept=".csv,text/csv" hidden (change)="onCsv($event)" [disabled]="importando" />
+    </label>
+    <button type="button" class="cargues-link" (click)="importarPlantilla()" [disabled]="importando">
+      Cargar CSV del servidor
+    </button>
+  </div>
+
+  <div class="hojas-filtros">
+    <label>EAN
+      <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.ean" />
+    </label>
+    <label>cliente
+      <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.cliente" />
+    </label>
+    <label>referencia
+      <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.referencia" />
+    </label>
+  </div>
+
+  <div class="hojas-toolbar">
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="pendiente('Imprimir (PDF)')">Imprimir (PDF)</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="pendiente('Exportar a excel')">Exportar a excel</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="pendiente('DATOS')">DATOS</button>
+    <select class="form-select form-select-sm hoja-xsl" disabled>
+      <option>Plantillas XSL</option>
+    </select>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="detalleOculto = !detalleOculto">
+      {{ detalleOculto ? "Mostrar Detalle" : "Ocultar Detalle" }}
+    </button>
+  </div>
+
+  <div *ngIf="cargando" class="spinner-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50" color="primary"></mat-progress-spinner>
+  </div>
+
+  <div class="mat-elevation-z4" *ngIf="!cargando">
+    <table class="table table-sm mb-0 cargues-tabla">
+      <thead>
+        <tr>
+          <th></th>
+          <th>ID</th>
+          <th>EANPROD</th>
+          <th>CLIENTE</th>
+          <th>LOCALIZACION</th>
+          <th>REFERENCIA</th>
+          <th *ngIf="!detalleOculto">DESCRIPCION</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of visibles">
+          <td class="acciones-cell">
+            <button type="button" class="btn-link-accion" (click)="abrirEditar(row)">[editar]</button>
+            <button type="button" class="btn-link-accion" (click)="eliminar(row)">[Eliminar]</button>
+          </td>
+          <td>{{ row.idEan }}</td>
+          <td>{{ row.ean }}</td>
+          <td>{{ row.cliente }}</td>
+          <td>{{ row.localizacion }}</td>
+          <td>{{ row.referencia }}</td>
+          <td *ngIf="!detalleOculto">{{ row.descripcion }}</td>
+        </tr>
+        <tr *ngIf="!visibles.length">
+          <td [attr.colspan]="detalleOculto ? 6 : 7" class="text-muted py-3">
+            Sin registros. Importe el CSV o agregue un EAN.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small text-muted mt-2 mb-0">Total: {{ visibles.length }} registros</p>
+</div>
+
+<div class="cargue-panel" *ngIf="panel">
+  <div class="hoja-dialog">
+    <h5>{{ panel === "editar" ? "Editar eanprodcli" : "Agregar eanprodcli" }}</h5>
+    <form (submit)="$event.preventDefault(); guardar()">
+      <div class="hoja-form-row">
+        <label for="eanProd">EAN_PRODUCTO</label>
+        <input id="eanProd" type="text" class="form-control" [(ngModel)]="form.ean" name="ean" required />
+      </div>
+      <div class="hoja-form-row">
+        <label for="eanCliente">CLIENTE</label>
+        <input id="eanCliente" type="text" class="form-control" [(ngModel)]="form.cliente" name="cliente" />
+      </div>
+      <div class="hoja-form-row">
+        <label for="eanLoc">LOCALIZACION</label>
+        <input id="eanLoc" type="text" class="form-control" [(ngModel)]="form.localizacion" name="localizacion" />
+      </div>
+      <div class="hoja-form-row">
+        <label for="eanRef">REFERENCIA_PRODUCTO</label>
+        <input id="eanRef" type="text" class="form-control" [(ngModel)]="form.referencia" name="referencia" required />
+      </div>
+      <div class="hoja-form-row">
+        <label for="eanDesc">DESCRIPCION</label>
+        <input id="eanDesc" type="text" class="form-control" [(ngModel)]="form.descripcion" name="descripcion" />
+      </div>
+      <div class="hoja-dialog-acciones">
+        <button type="submit" class="btn btn-secondary btn-sm">Aceptar</button>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="cancelar()">cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>

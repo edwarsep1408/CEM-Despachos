@@ -39,7 +39,7 @@ export class BodegasService {
 
     console.log(bodega, "<- service");
     
-    return this.http.get<any>(`${this.url}/consultarInventarioBodega/${bodega}`);
+    return this.http.get<any>(`${this.url}/consultarInventarioBodega/${encodeURIComponent(bodega)}`);
 
   }
 

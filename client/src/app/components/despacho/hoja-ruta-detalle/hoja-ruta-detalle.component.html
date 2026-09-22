@@ -118,7 +118,7 @@
     Total (peso) = {{ (hoja.totalPeso || 0) | number : "1.2-2" }} kg<br />
     Total (destare) = {{ (hoja.totalDestare || 0) | number : "1.2-2" }} kg<br />
     Peso cargado = {{ (hoja.pesoCargado || 0) | number : "1.2-2" }} kg
-    <ng-container *ngIf="hoja.capacidadKg"> / {{ hoja.capacidadKg | number : "1.0-0" }} kg ({{ hoja.usoPorcentaje | number : "1.0-1" }}%)</ng-container>
+    <ng-container *ngIf="hoja.capacidadKg"> / {{ hoja.capacidadKg | number : "1.2-2" }} kg ({{ hoja.usoPorcentaje | number : "1.0-1" }}%)</ng-container>
   </p>
 </div>
 
@@ -236,7 +236,7 @@
             <td>{{ item.municipio }}</td>
             <td>{{ item.fecha }}</td>
             <td>{{ item.valor | number : "1.0-0" }}</td>
-            <td>{{ item.peso | number : "1.2-4" }}</td>
+            <td>{{ item.peso | number : "1.2-2" }}</td>
             <td>{{ item.bodega }}</td>
             <td>{{ item.vendedor }}</td>
             <td *ngIf="!detalleFacturasOculto">{{ item.sep }}</td>

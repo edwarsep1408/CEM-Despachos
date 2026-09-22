@@ -1,4 +1,5 @@
 import axios from "axios";
+import { BODEGAS_GRUPO_ETC } from "../data/bodegasGrupoEtc";
 
 /**
  * Camino original (microservicio CEM puerto 5015).
@@ -8,24 +9,6 @@ const CEM_INVENTARIO_API =
   process.env.CEM_INVENTARIO_API || "http://192.168.1.252:5015/api/v1";
 const SIESA_ID_CIA = process.env.SIESA_ID_CIA || "13";
 const INVENTARIO_TIMEOUT_MS = Number(process.env.CEM_INVENTARIO_TIMEOUT_MS || 25000);
-
-const BODEGAS_COMPANIA = [
-  "002",
-  "PT001",
-  "PT003",
-  "PT002",
-  "001",
-  "BM004",
-  "008",
-  "PT004",
-  "PT0PV",
-  "009",
-  "BM002",
-  "BM001",
-  "011",
-  "BM003",
-  "PT006",
-];
 
 const TIPOS_BODEGA = [
   "INV143502",
@@ -65,7 +48,7 @@ export const consultarExistenciasCemCompania = async () => {
     `${CEM_INVENTARIO_API}/get-existencia-inventario-bodegas`,
     {
       idCia: Number(SIESA_ID_CIA),
-      bodegas: BODEGAS_COMPANIA,
+      bodegas: BODEGAS_GRUPO_ETC,
       tiposInventarios: TIPOS_COMPANIA,
     },
     { timeout: 60000 }

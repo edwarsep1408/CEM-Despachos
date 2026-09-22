@@ -16,6 +16,8 @@ import tarasEmpaquesRoutes from "./tarasEmpaques.routes"
 import hojasRutaRoutes from "./hojasRuta.routes"
 import vehiculosRoutes from "./vehiculos.routes"
 import reaprovisionamientosRoutes from "./reaprovisionamientos.routes"
+import ordenesCompraRoutes from "./ordenesCompra.routes"
+import codigosEanRoutes from "./codigosEan.routes"
 import pisoRoutes from "./piso.routes"
 import firmantesRoutes from "./firmantes.routes"
 import conductorRoutes from "./conductor.routes"
@@ -39,6 +41,8 @@ export default {
     hojasRutaRoutes,
     vehiculosRoutes,
     reaprovisionamientosRoutes,
+    ordenesCompraRoutes,
+    codigosEanRoutes,
     pisoRoutes,
     firmantesRoutes,
     conductorRoutes

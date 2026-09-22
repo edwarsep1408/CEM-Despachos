@@ -32,7 +32,7 @@
   <p class="small mb-2">
     Documentos despachados {{ cargue.docsDesp }}/{{ cargue.totalDocumentos }}
     · UND {{ cargue.undDesp }}/{{ cargue.undPedido }}
-    · KG {{ cargue.pesoDesp | number : "1.1-2" }}/{{ cargue.pesoPedido | number : "1.1-2" }}
+    · KG {{ cargue.pesoDesp | number : "1.2-2" }}/{{ cargue.pesoPedido | number : "1.2-2" }}
   </p>
 
   <div class="mat-elevation-z4 mb-4">
@@ -87,9 +87,9 @@
           <td><span class="estado-pill" [attr.data-estado]="l.estado">{{ etiqueta(l.estado) }}</span></td>
           <td>{{ l.pedidoEn || "—" }}</td>
           <td>{{ l.unidades }}</td>
-          <td>{{ l.pesoPedido | number : "1.1-2" }}</td>
+          <td>{{ l.pesoPedido | number : "1.2-2" }}</td>
           <td>{{ l.cd }}</td>
-          <td>{{ (l.pd || 0) | number : "1.1-2" }}</td>
+          <td>{{ (l.pd || 0) | number : "1.2-2" }}</td>
         </tr>
         <tr *ngIf="!(docSel.lineas || []).length">
           <td colspan="8" class="text-muted py-3">Este documento no tiene líneas de despacho aún.</td>

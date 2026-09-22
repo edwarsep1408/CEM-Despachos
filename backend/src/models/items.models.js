@@ -4,6 +4,8 @@ const ItemSchema  = new Schema({
     item: {type: String},
     codigoItem: {type: String},
     referencia: {type: String},
+    /** GTIN/EAN de cadena (EDI .hse LIN). Opcional hasta sincronizar UnoEE. */
+    ean: { type: String, default: "", index: true },
     descripcion: {type: String},
     descCorta: {type: String},
     idTipoinventario: {type: String},

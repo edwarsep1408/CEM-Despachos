@@ -69,7 +69,7 @@
       <th mat-header-cell *matHeaderCellDef mat-sort-header>
         SUMA KILOS NETOS
       </th>
-      <td mat-cell *matCellDef="let element">{{ element.kg_neto }}</td>
+      <td mat-cell *matCellDef="let element">{{ element.kg_neto | number : "1.2-2" }}</td>
     </ng-container>
     <ng-container matColumnDef="suma_unidades">
       <th mat-header-cell *matHeaderCellDef>SUMA UNIDADES</th>
@@ -80,7 +80,7 @@
     <ng-container matColumnDef="promedio">
       <th mat-header-cell *matHeaderCellDef>PROMEDIO</th>
       <td mat-cell *matCellDef="let element">
-        {{ element.kg_neto / element.unidades_contadas | number : "1.0-2" }}
+        {{ element.kg_neto / element.unidades_contadas | number : "1.2-2" }}
       </td>
     </ng-container>
 

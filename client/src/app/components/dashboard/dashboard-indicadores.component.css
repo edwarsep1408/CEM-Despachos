@@ -46,7 +46,7 @@
 
 .indicadores-kpis {
   display: grid;
-  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -67,6 +67,27 @@
 .kpi strong {
   font-size: 1.6rem;
   color: #0f4c8c;
+  white-space: nowrap;
+}
+
+.kpi-hint {
+  display: block;
+  margin-top: 4px;
+  color: #6c757d;
+  font-size: 0.75rem;
+}
+
+.kpi-total {
+  background: #0f4c8c;
+}
+
+.kpi-total small,
+.kpi-total .kpi-hint {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.kpi-total strong {
+  color: #fff;
 }
 
 .indicadores-grid {

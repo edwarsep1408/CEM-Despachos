@@ -2,8 +2,10 @@ import carguesModel from "../models/cargues.models";
 import usuariosModel from "../models/usuarios.models";
 import pedidosModel from "../models/pedidos.models";
 import reaproModel from "../models/reaprovisionamientos.models";
+import ordenesModel from "../models/ordenesCompra.models";
 import siesaPedidos from "../services/siesaPedidos.servicios";
 import { snapshotReapro } from "./reaprovisionamientos.controllers";
+import { snapshotOc } from "./ordenesCompra.controllers";
 import { hidratarCargue } from "./piso.controllers";
 import { esUsuarioDespachador } from "./seguridad.controllers";
 import { normalizarLineaPiso, progresoCargue } from "../services/piso.servicios";
@@ -20,6 +22,10 @@ import {
   pedidoClave,
   textoOcupado,
 } from "../services/documentosOcupados.servicios";
+import {
+  listarStAbiertasParaCargue,
+  snapshotsStPorIds,
+} from "../services/carguesSt.servicios";
 
 const carguesCtr = {};
 
@@ -225,8 +231,25 @@ carguesCtr.getDocumentosDisponibles = async (req, res) => {
       if (doc.idEnc) ocupados.add(String(doc.idEnc));
     }
 
-    if (tipo === "OC" || tipo === "TRANSITO") {
-      return ok(res, []);
+    if (tipo === "OC") {
+      const lista = await ordenesModel
+        .find({ estado: { $in: ["aprobado", "temporal"] } })
+        .lean();
+      const body = lista
+        .map(snapshotOc)
+        .filter(
+          (item) =>
+            item.idEnc &&
+            !ocupados.has(item.idEnc) &&
+            mismaBodega(item.bodega, cargue.bodega)
+        )
+        .sort((a, b) => String(b.nroDoc).localeCompare(String(a.nroDoc)));
+      return ok(res, body);
+    }
+
+    if (tipo === "TRANSITO") {
+      const { items } = await listarStAbiertasParaCargue(cargue.bodega, ocupados);
+      return ok(res, items);
     }
 
     if (tipo === "REAPRO" || tipo === "REAPROVISIONAMIENTO") {
@@ -315,6 +338,83 @@ carguesCtr.agregarDocumentos = async (req, res) => {
         return fail(
           res,
           "Ningún reaprovisionamiento cumple: no debe estar anulado ni en otro cargue u hoja de ruta.",
+          400
+        );
+      }
+    } else if (tipoDoc === "OC") {
+      const docs = await ordenesModel.find({ idEnc: { $in: lista } }).lean();
+      const porId = new Map(docs.map((item) => [String(item.idEnc), item]));
+      for (const idEnc of lista) {
+        const bloqueo = bloqueoPedidoEnCargue(ocupacion, idEnc, cargue._id);
+        if (bloqueo) {
+          bloqueados.push(textoOcupado(idEnc, bloqueo));
+          continue;
+        }
+        const oc = porId.get(idEnc);
+        if (!oc || !["aprobado", "temporal"].includes(oc.estado)) continue;
+        if (!mismaBodega(oc.bodegaOrigen, cargue.bodega)) continue;
+        const snap = snapshotOc(oc);
+        nuevos.push(documentoDesdeSnap(snap));
+        ocupacion.pedidosEnCargues.set(pedidoClave(idEnc), {
+          ambito: "cargue",
+          id: String(cargue._id),
+          etiqueta: `el cargue ${cargue.idCargue}`,
+        });
+        if (oc.estado === "temporal") {
+          await ordenesModel.updateOne(
+            { _id: oc._id },
+            { $set: { estado: "aprobado", fecha_actualizacion: new Date() } }
+          );
+        }
+      }
+      if (bloqueados.length && !nuevos.length) {
+        return fail(
+          res,
+          `Un documento no puede repetirse en hojas de ruta ni cargues. ${bloqueados.join(". ")}.`,
+          400
+        );
+      }
+      if (!nuevos.length) {
+        return fail(
+          res,
+          "Ninguna orden de compra cumple: debe estar activa, de la bodega del despachador y sin otro cargue u hoja.",
+          400
+        );
+      }
+    } else if (tipoDoc === "TRANSITO") {
+      const snaps = await snapshotsStPorIds(lista, cargue.bodega);
+      const porId = new Map();
+      for (const snap of snaps) {
+        porId.set(snap.idEnc, snap);
+        porId.set(String(snap.nroDoc), snap);
+      }
+      for (const idEnc of lista) {
+        const bloqueo = bloqueoPedidoEnCargue(ocupacion, idEnc, cargue._id);
+        if (bloqueo) {
+          bloqueados.push(textoOcupado(idEnc, bloqueo));
+          continue;
+        }
+        const snap = porId.get(idEnc);
+        if (!snap) continue;
+        if (!mismaBodega(snap.bodega, cargue.bodega)) continue;
+        nuevos.push(documentoDesdeSnap(snap));
+        ocupacion.pedidosEnCargues.set(pedidoClave(snap.idEnc), {
+          ambito: "cargue",
+          id: String(cargue._id),
+          etiqueta: `el cargue ${cargue.idCargue}`,
+        });
+      }
+      if (bloqueados.length && !nuevos.length) {
+        return fail(
+          res,
+          `Un documento no puede repetirse en hojas de ruta ni cargues. ${bloqueados.join(". ")}.`,
+          400
+        );
+      }
+      if (!nuevos.length) {
+        return fail(
+          res,
+          "Ninguna ST cumple: debe estar abierta en SIESA (saldo pendiente), salir de la bodega del despachador y no estar en otro cargue u hoja.",
           400
         );
       }

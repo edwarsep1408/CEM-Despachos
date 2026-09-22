@@ -69,9 +69,9 @@
           <span class="piso-pedido-en" [attr.data-um]="pedidoEnDe(row)">{{ pedidoEnDe(row) }}</span>
         </td>
         <td>{{ row.unidades }}</td>
-        <td>{{ row.pesoPedido | number : "1.1-2" }}</td>
+        <td>{{ row.pesoPedido | number : "1.2-2" }}</td>
         <td>{{ row.cd }}</td>
-        <td>{{ (row.pd || 0) | number : "1.1-2" }}</td>
+        <td>{{ (row.pd || 0) | number : "1.2-2" }}</td>
       </tr>
     </tbody>
   </table>

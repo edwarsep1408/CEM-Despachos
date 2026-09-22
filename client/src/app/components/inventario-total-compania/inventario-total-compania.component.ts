@@ -39,8 +39,12 @@ export class InventarioTotalCompaniaComponent implements OnDestroy {
   totalUnidades = 0;
   totalKgMovimento = 0;
   totalUnidadesMovimiento = 0;
+  canastas = 0;
+  canastillas = 0;
   transitoCargando = false;
+  private transitoTimer: ReturnType<typeof setTimeout> | null = null;
   private transitoIntentos = 0;
+  private transitoEstable = false;
   token: string = ''
   detallesLineaSeleccionada: any = [];
   statusSession: boolean = false
@@ -51,7 +55,6 @@ export class InventarioTotalCompaniaComponent implements OnDestroy {
   @ViewChild('sortLinea') sortLinea!: MatSort;
   dataSource = new MatTableDataSource<any>();
   dataSourceLinea = new MatTableDataSource([]);
-  private transitoTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private _bodegasService: BodegasService, private _router: Router, private _route: ActivatedRoute, private sessionService: SesionService) {
 
@@ -70,6 +73,12 @@ export class InventarioTotalCompaniaComponent implements OnDestroy {
 
   consultarInventarioCompania() {
 
+    if (this.transitoTimer) {
+      clearTimeout(this.transitoTimer);
+      this.transitoTimer = null;
+    }
+    this.transitoIntentos = 0;
+    this.transitoEstable = false;
     this._bodegasService.consultarInventarioTotalCompania().subscribe({
       next: (response) => {
         if (response.body) {
@@ -89,6 +98,8 @@ export class InventarioTotalCompaniaComponent implements OnDestroy {
           this.unidadesCombinacionCriterios = response.body.unidadesCombCriterios;
           this.totalKgs = response.body.totales.totalKgCompania;
           this.totalUnidades = response.body.totales.totalUnidadesCompania;
+          this.canastas = Number(response.body.totales.canastas) || 0;
+          this.canastillas = Number(response.body.totales.canastillas) || 0;
           this.aplicarTransito(response.body);
 
           setTimeout(() => {
@@ -116,11 +127,7 @@ export class InventarioTotalCompaniaComponent implements OnDestroy {
     });
   }
 
-  ngOnInit(): void {
-
-    setTimeout(() => this.reloadPage(), 200000)
-
-  }
+  ngOnInit(): void {}
 
   ngOnDestroy(): void {
     if (this.transitoTimer) {
@@ -130,22 +137,24 @@ export class InventarioTotalCompaniaComponent implements OnDestroy {
   }
 
   private aplicarTransito(body: any): void {
-    const totales = body?.totales || {};
-    if (totales.totalKgMovimiento != null) {
-      this.totalKgMovimento = totales.totalKgMovimiento;
-    }
-    if (totales.totalUnidadesMovimiento != null) {
-      this.totalUnidadesMovimiento = totales.totalUnidadesMovimiento;
-    }
-    if (Array.isArray(body?.documentosEnTrasporte)) {
-      this.insumosenTransito = body.documentosEnTrasporte;
-    }
     const transito = body?.transito || {};
-    const sinDatos = !this.totalKgMovimento && !this.totalUnidadesMovimiento;
-    this.transitoCargando = Boolean(transito.enCurso) && sinDatos;
-    if (transito.enCurso) {
-      this.programarRefrescoTransito();
-    } else if (!transito.listo && sinDatos && this.transitoIntentos < 20) {
+    const enCurso = Boolean(transito.enCurso);
+    this.transitoCargando = enCurso;
+    const pintar = !enCurso || !this.transitoEstable;
+    if (pintar) {
+      const totales = body?.totales || {};
+      if (totales.totalKgMovimiento != null) {
+        this.totalKgMovimento = totales.totalKgMovimiento;
+      }
+      if (totales.totalUnidadesMovimiento != null) {
+        this.totalUnidadesMovimiento = totales.totalUnidadesMovimiento;
+      }
+      if (Array.isArray(body?.documentosEnTrasporte)) {
+        this.insumosenTransito = body.documentosEnTrasporte;
+      }
+      this.transitoEstable = true;
+    }
+    if (enCurso && this.transitoIntentos < 150) {
       this.programarRefrescoTransito();
     }
   }
@@ -153,7 +162,7 @@ export class InventarioTotalCompaniaComponent implements OnDestroy {
   private programarRefrescoTransito(): void {
     if (this.transitoTimer) clearTimeout(this.transitoTimer);
     this.transitoIntentos += 1;
-    this.transitoTimer = setTimeout(() => this.consultarTransito(), 8000);
+    this.transitoTimer = setTimeout(() => this.consultarTransito(), 4000);
   }
 
   private consultarTransito(): void {
@@ -163,7 +172,9 @@ export class InventarioTotalCompaniaComponent implements OnDestroy {
       },
       error: (error) => {
         console.error(error);
-        this.transitoCargando = false;
+        if (this.transitoCargando && this.transitoIntentos < 150) {
+          this.programarRefrescoTransito();
+        }
       },
     });
   }
@@ -258,7 +269,7 @@ export class InventarioTotalCompaniaComponent implements OnDestroy {
         enabled: true,
         enabledOnSeries: [1],
         formatter: function (val: any) {
-          return val.toFixed(0);
+          return Number(val || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
         },
         style: {
           fontSize: '11px'
@@ -372,10 +383,6 @@ export class InventarioTotalCompaniaComponent implements OnDestroy {
 
   isLineaExpanded(key: string): boolean {
     return this.expandedLineas.has(key);
-  }
-
-  reloadPage() {
-    window.location.reload();
   }
 
 }

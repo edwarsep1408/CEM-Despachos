@@ -32,42 +32,42 @@
     </div>
   </div>
   <div class="row g-4 rowSpaces" *ngIf="!cargando">
-    <div class="col-md-3">
+    <div class="col-md">
       <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
         <div class="card-body text-center">
           <i class="bi bi-grid-3x3 fs-1 mb-3"></i>
-          <h5 class="card-title text-dark">Bodega: {{ bodegaSeleccionada.codigo }}</h5>
-          <p class="card-text text-muted">Kgs total: {{ pesoTotal }}</p>
+          <h5 class="card-title text-dark">Kgs total: {{ pesoTotal | number: '1.2-2' }}</h5>
+          <p class="text-muted small mb-0">{{ bodegaSeleccionada.codigo }} · sin canastas ni canastillas</p>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md">
       <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
         <div class="card-body text-center">
           <i class="bi bi-boxes fs-1 mb-3"></i>
-          <h5 class="card-title text-dark">Bodega: {{ bodegaSeleccionada.codigo }}</h5>
-          <p class="card-text text-muted">Unidades totales: {{ unidadesTotales }}</p>
+          <h5 class="card-title text-dark">Unidades: {{ unidadesTotales | number: '1.0-0' }}</h5>
+          <p class="text-muted small mb-0">productos, sin canastas ni canastillas</p>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md">
       <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
         <div class="card-body text-center">
           <i class="bi bi-basket fs-1 mb-3"></i>
-          <h5 class="card-title text-dark">Bodega: {{ bodegaSeleccionada.codigo }}</h5>
-          <p class="card-text text-muted">Canastas: {{ canastas }}</p>
+          <h5 class="card-title text-dark">Canastas: {{ canastas | number: '1.0-0' }}</h5>
+          <p class="text-muted small mb-0">no suman kg ni unidades</p>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md">
       <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
         <div class="card-body text-center">
           <i class="bi bi-basket2 fs-1 mb-3"></i>
-          <h5 class="card-title text-dark">Bodega: {{ bodegaSeleccionada.codigo }}</h5>
-          <p class="card-text text-muted">Canastillas: {{ canastillas }}</p>
+          <h5 class="card-title text-dark">Canastillas: {{ canastillas | number: '1.0-0' }}</h5>
+          <p class="text-muted small mb-0">no suman kg ni unidades</p>
         </div>
       </div>
     </div>
@@ -136,7 +136,7 @@
 
         <ng-container matColumnDef="Existencia_1">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Kilogramos</th>
-          <td mat-cell *matCellDef="let element">{{ element.Existencia_1 | number: '1.0-2' }}</td>
+          <td mat-cell *matCellDef="let element">{{ element.Existencia_1 | number: '1.2-2' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="Existencia_2">
@@ -194,7 +194,7 @@
 
         <ng-container matColumnDef="Existencia_1">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Kilogramos</th>
-          <td mat-cell *matCellDef="let element">{{ element.Existencia_1 }}</td>
+          <td mat-cell *matCellDef="let element">{{ element.Existencia_1 | number: '1.2-2' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="Existencia_2">

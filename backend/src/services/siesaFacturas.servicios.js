@@ -74,8 +74,8 @@ const extraerQuery = (raw) => {
 };
 
 const configFacturas = () => {
-  const key = process.env.SIESA_PEDIDOS_CONNI_KEY || "";
-  const token = process.env.SIESA_PEDIDOS_CONNI_TOKEN || "";
+  const key = process.env.SIESA_FACTURAS_CONNI_KEY || process.env.SIESA_PEDIDOS_CONNI_KEY || "";
+  const token = process.env.SIESA_FACTURAS_CONNI_TOKEN || process.env.SIESA_PEDIDOS_CONNI_TOKEN || "";
   const rawUrl =
     process.env.SIESA_FACTURAS_BASE_URL || process.env.SIESA_PEDIDOS_BASE_URL || "";
   const query = extraerQuery(rawUrl);

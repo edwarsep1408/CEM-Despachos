@@ -44,6 +44,7 @@ import { HojaRutaDetalleComponent } from './components/despacho/hoja-ruta-detall
 import { OrdenesDeCompraComponent } from './components/despacho/ordenes-de-compra/ordenes-de-compra.component';
 import { MotivosOmisionComponent } from './components/despacho/motivos-omision/motivos-omision.component';
 import { TarasEmpaquesComponent } from './components/despacho/taras-empaques/taras-empaques.component';
+import { CodigosEanComponent } from './components/despacho/codigos-ean/codigos-ean.component';
 import { AvisoDespachoComponent } from './components/despacho/aviso-despacho/aviso-despacho.component';
 import { CompromisosPedidosComponent } from './components/despacho/compromisos-pedidos/compromisos-pedidos.component';
 import { PisoDespachoComponent } from './components/despacho/piso-despacho/piso-despacho.component';
@@ -128,6 +129,7 @@ export const routes: Routes = [
       { path: 'despacho/ordenes-de-compra', component: OrdenesDeCompraComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.ordenes-compra' } },
       { path: 'despacho/motivos-omision', component: MotivosOmisionComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.motivos' } },
       { path: 'despacho/taras-empaques', component: TarasEmpaquesComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.taras' } },
+      { path: 'despacho/codigos-ean', component: CodigosEanComponent, canActivate: [permissionGuard], data: { permisos: ['despacho.codigos-ean', 'despacho.ordenes-compra', 'items.ver'] } },
       { path: 'despacho/aviso-despacho', component: AvisoDespachoComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.aviso' } },
       { path: 'despacho/compromisos-pedidos', component: CompromisosPedidosComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.compromisos' } },
       { path: 'despacho/piso', component: PisoDespachoComponent, canActivate: [permissionGuard], data: { permiso: 'despacho.piso' } },

@@ -26,6 +26,7 @@ interface NavGroup {
 const RUTAS_CATALOGO_CONFIG = [
   "/configuracion/despacho/motivos-omision",
   "/configuracion/despacho/taras-empaques",
+  "/configuracion/despacho/codigos-ean",
   "/configuracion/despacho/asignacion-bodega",
   "/configuracion/despacho/muelles",
   "/configuracion/basculas",
@@ -128,6 +129,7 @@ export class LayoutComponent implements OnInit {
         { label: 'Básculas', icon: 'bx-tachometer', route: '/configuracion/basculas', permisos: ['basculas.ver', 'inventario.gestionar'] },
         { label: 'Motivos de omisión', icon: 'bx-block', route: '/configuracion/despacho/motivos-omision', permiso: 'despacho.motivos' },
         { label: 'Taras o empaques', icon: 'bx-box', route: '/configuracion/despacho/taras-empaques', permiso: 'despacho.taras' },
+        { label: 'Códigos EAN', icon: 'bx-barcode', route: '/configuracion/despacho/codigos-ean', permisos: ['despacho.codigos-ean', 'despacho.ordenes-compra', 'items.ver'] },
         { label: 'Vehículos', icon: 'bxs-truck', route: '/configuracion/vehiculos', permiso: 'vehiculos.ver' },
         { label: 'Firmantes', icon: 'bx-pen', route: '/configuracion/firmantes', permiso: 'despacho.firmantes' },
         { label: 'Mesas', icon: 'bx-table', route: '/configuracion/mesas', permiso: 'mesas.ver' },

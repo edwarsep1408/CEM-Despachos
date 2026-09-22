@@ -14,6 +14,7 @@ export const CATALOGO_PERMISOS = [
   { codigo: "despacho.muelles", modulo: "Configuración", nombre: "Muelles" },
   { codigo: "despacho.hojas-ruta", modulo: "Despacho", nombre: "Hojas de ruta" },
   { codigo: "despacho.ordenes-compra", modulo: "Despacho", nombre: "Órdenes de compra" },
+  { codigo: "despacho.codigos-ean", modulo: "Configuración", nombre: "Códigos EAN" },
   { codigo: "despacho.motivos", modulo: "Configuración", nombre: "Motivos de omisión" },
   { codigo: "despacho.firmantes", modulo: "Configuración", nombre: "Firmantes" },
   { codigo: "despacho.taras", modulo: "Configuración", nombre: "Taras o empaques" },

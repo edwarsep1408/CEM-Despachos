@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnDestroy, OnInit } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterModule } from "@angular/router";
@@ -16,7 +16,7 @@ type TipoDoc = "PEDIDO" | "REAPRO" | "OC" | "TRANSITO";
   templateUrl: "./cargue-detalle.component.html",
   styleUrls: ["../despacho-page.css", "./cargue-detalle.component.css"],
 })
-export class CargueDetalleComponent implements OnInit {
+export class CargueDetalleComponent implements OnInit, OnDestroy {
   id = "";
   cargue: any = null;
   cargando = true;
@@ -26,6 +26,9 @@ export class CargueDetalleComponent implements OnInit {
   disponibles: any[] = [];
   seleccionDisponibles = new Set<string>();
   cargandoDisponibles = false;
+  consultaStEnCurso = false;
+  private stTimer: ReturnType<typeof setTimeout> | null = null;
+  private stIntentos = 0;
   pagina = 1;
   porPagina = 20;
   etiquetaPedido = etiquetaPedido;
@@ -50,6 +53,10 @@ export class CargueDetalleComponent implements OnInit {
     this.cargar();
   }
 
+  ngOnDestroy() {
+    this.limpiarTimerSt();
+  }
+
   toast(icon: "success" | "error" | "info", title: string) {
     Swal.fire({ toast: true, position: "top", icon, title, showConfirmButton: false, timer: 2800 });
   }
@@ -59,7 +66,7 @@ export class CargueDetalleComponent implements OnInit {
   }
 
   get totalPeso() {
-    return Number(this.cargue?.totalPeso || 0).toFixed(2);
+    return Number(this.cargue?.totalPeso || 0);
   }
 
   get vendedores() {
@@ -78,7 +85,10 @@ export class CargueDetalleComponent implements OnInit {
         const q = this.filtros.cliente.toLowerCase();
         const hay =
           String(item.cliente || "").toLowerCase().includes(q) ||
-          String(item.codigoCliente || item.nit || "").toLowerCase().includes(q);
+          String(item.establecimiento || item.nombreEstablecimiento || "").toLowerCase().includes(q) ||
+          String(item.razonSocial || "").toLowerCase().includes(q) ||
+          String(item.glnEntrega || item.codigoCliente || item.nit || "").toLowerCase().includes(q) ||
+          String(item.productosResumen || "").toLowerCase().includes(q);
         if (!hay) return false;
       }
       if (
@@ -154,11 +164,14 @@ export class CargueDetalleComponent implements OnInit {
   }
 
   abrirPanel(tipo: TipoDoc) {
+    this.limpiarTimerSt();
     this.panelTipo = tipo;
     this.panelAbierto = true;
     this.seleccionDisponibles = new Set();
     this.disponibles = [];
     this.pagina = 1;
+    this.consultaStEnCurso = false;
+    this.stIntentos = 0;
     this.filtros = {
       desde: "",
       hasta: "",
@@ -168,19 +181,73 @@ export class CargueDetalleComponent implements OnInit {
       barrio: "",
       municipio: "",
     };
-    if (tipo !== "PEDIDO" && tipo !== "REAPRO") return;
+    if (tipo === "OC" || tipo === "PEDIDO" || tipo === "REAPRO") {
+      this.cargarDisponiblesCatalogo(tipo);
+      return;
+    }
+    if (tipo === "TRANSITO") {
+      this.cargarStDisponibles(true);
+      return;
+    }
+  }
+
+  private limpiarTimerSt() {
+    if (this.stTimer) {
+      clearTimeout(this.stTimer);
+      this.stTimer = null;
+    }
+  }
+
+  private aplicarRangoFechasDisponibles() {
+    const fechas = this.disponibles.map((item) => String(item.fecha || "")).filter(Boolean).sort();
+    this.filtros.desde = fechas[0] || "";
+    this.filtros.hasta = fechas[fechas.length - 1] || "";
+  }
+
+  private cargarDisponiblesCatalogo(tipo: TipoDoc) {
     this.cargandoDisponibles = true;
     this.cargues.getDocumentos(this.id, tipo).subscribe({
       next: (res) => {
         this.disponibles = res.body || [];
-        const fechas = this.disponibles.map((item) => String(item.fecha || "")).filter(Boolean).sort();
-        this.filtros.desde = fechas[0] || "";
-        this.filtros.hasta = fechas[fechas.length - 1] || "";
+        this.aplicarRangoFechasDisponibles();
         this.cargandoDisponibles = false;
       },
       error: (err) => {
         this.cargandoDisponibles = false;
         this.toast("error", err?.error?.body?.message || "No se pudieron leer los documentos");
+      },
+    });
+  }
+
+  cargarStDisponibles(primera = false) {
+    if (primera) this.cargandoDisponibles = true;
+    this.consultaStEnCurso = true;
+    this.cargues.getDocumentos(this.id, "TRANSITO").subscribe({
+      next: (res) => {
+        const lista = res.body || [];
+        if (lista.length) {
+          this.disponibles = lista;
+          this.aplicarRangoFechasDisponibles();
+          this.cargandoDisponibles = false;
+          this.consultaStEnCurso = false;
+          this.limpiarTimerSt();
+          return;
+        }
+        if (this.stIntentos < 45) {
+          this.stIntentos += 1;
+          this.limpiarTimerSt();
+          this.stTimer = setTimeout(() => this.cargarStDisponibles(false), 4000);
+          return;
+        }
+        this.disponibles = [];
+        this.cargandoDisponibles = false;
+        this.consultaStEnCurso = false;
+      },
+      error: (err) => {
+        this.cargandoDisponibles = false;
+        this.consultaStEnCurso = false;
+        this.limpiarTimerSt();
+        this.toast("error", err?.error?.body?.message || "No se pudieron consultar las ST en SIESA");
       },
     });
   }
@@ -211,14 +278,31 @@ export class CargueDetalleComponent implements OnInit {
   agregarSeleccionados() {
     const ids = Array.from(this.seleccionDisponibles);
     if (!ids.length) {
-      this.toast("info", this.panelTipo === "REAPRO" ? "Seleccione al menos un reaprovisionamiento" : "Seleccione al menos un pedido");
+      const aviso =
+        this.panelTipo === "REAPRO"
+          ? "Seleccione al menos un reaprovisionamiento"
+          : this.panelTipo === "TRANSITO"
+            ? "Seleccione al menos una ST"
+            : this.panelTipo === "OC"
+              ? "Seleccione al menos una orden de compra"
+              : "Seleccione al menos un pedido";
+      this.toast("info", aviso);
       return;
     }
     this.cargues.agregarDocumentos({ _id: this.id, tipo: this.panelTipo, ids }).subscribe({
       next: (res) => {
         this.cargue = res.body;
         this.panelAbierto = false;
-        this.toast("success", this.panelTipo === "REAPRO" ? "Reaprovisionamientos agregados" : "Pedidos agregados");
+        this.limpiarTimerSt();
+        const okMsg =
+          this.panelTipo === "REAPRO"
+            ? "Reaprovisionamientos agregados"
+            : this.panelTipo === "TRANSITO"
+              ? "Salidas en tránsito agregadas"
+              : this.panelTipo === "OC"
+                ? "Órdenes de compra agregadas"
+                : "Pedidos agregados";
+        this.toast("success", okMsg);
       },
       error: (err) => this.toast("error", err?.error?.body?.message || "No se pudieron agregar"),
     });

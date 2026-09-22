@@ -10,23 +10,44 @@
       <h3 class="section-title">
         Inventario total compañía
       </h3>
-      <p class="text-muted small mb-0">Existencias en tiempo real.</p>
+      <p class="text-muted small mb-0">Suma de las bodegas del grupo ETC. El tránsito ST va en el segundo KPI.</p>
     </div>
     <div class="col col-sm-6 col-md-6 col-lg-6 col-xl-6 text-end">
     </div>
   </div>
 
     <div class="row g-4 rowSpaces">
-    <div class="col-md-3">
+    <div class="col-md">
       <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
         <div class="card-body text-center">
           <i class="bi bi-grid-3x3 fs-1 mb-3"></i>
-          <h5 class="card-title text-dark">Kgs total: {{totalKgs | number: '1.0-2' }}</h5>
+          <h5 class="card-title text-dark">Kgs en bodega: {{totalKgs | number: '1.2-2' }}</h5>
+          <p class="text-muted small mb-0">grupo ETC, sin ST</p>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md">
+      <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
+        <div class="card-body text-center">
+          <i class="bi bi-truck fs-1 mb-3"></i>
+          <h5 class="card-title text-dark">Kgs en transito: {{totalKgMovimento | number: '1.2-2'}}</h5>
+          <p class="text-muted small mb-0" *ngIf="transitoCargando">actualizando ST…</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md">
+      <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
+        <div class="card-body text-center">
+          <i class="bi bi-plus-circle fs-1 mb-3"></i>
+          <h5 class="card-title text-dark">Kgs con transito: {{ totalKgs + totalKgMovimento | number: '1.2-2' }}</h5>
+          <p class="text-muted small mb-0" *ngIf="transitoCargando">bodega + ST en curso</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md">
       <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
         <div class="card-body text-center">
           <i class="bi bi-boxes fs-1 mb-3"></i>
@@ -35,20 +56,32 @@
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md">
       <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
         <div class="card-body text-center">
-          <i class="bi bi-truck fs-1 mb-3"></i>
-          <h5 class="card-title text-dark">Kgs en transito: <span *ngIf="transitoCargando">Cargando…</span><span *ngIf="!transitoCargando">{{totalKgMovimento | number: '1.0-2'}}</span></h5>
+          <i class="bi bi-basket2 fs-1 mb-3"></i>
+          <h5 class="card-title text-dark">Unidades en transito: {{totalUnidadesMovimiento | number: '1.0-0'}}</h5>
+          <p class="text-muted small mb-0" *ngIf="transitoCargando">actualizando ST…</p>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md">
+      <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
+        <div class="card-body text-center">
+          <i class="bi bi-basket fs-1 mb-3"></i>
+          <h5 class="card-title text-dark">Canastas: {{ canastas | number:'1.0-0' }}</h5>
+          <p class="text-muted small mb-0">no suman kg ni unidades</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md">
       <div class="card shadow-sm border-0 rounded-4 h-100 hover-shadow">
         <div class="card-body text-center">
           <i class="bi bi-basket2 fs-1 mb-3"></i>
-          <h5 class="card-title text-dark">Unidades en transito: <span *ngIf="transitoCargando">Cargando…</span><span *ngIf="!transitoCargando">{{totalUnidadesMovimiento | number: '1.0-0'}}</span></h5>
+          <h5 class="card-title text-dark">Canastillas: {{ canastillas | number:'1.0-0' }}</h5>
+          <p class="text-muted small mb-0">no suman kg ni unidades</p>
         </div>
       </div>
     </div>
@@ -98,7 +131,7 @@
                       <h5 class="mb-0">
                         <i class="bi bi-truck me-2"></i> ST {{ movimiento.consec_docto }}
                       </h5>
-                      <span class="badge bg-light text-dark">{{ movimiento.tipo_docto.trim() }}</span>
+                      <span class="badge bg-light text-dark">{{ movimiento.fecha || movimiento.tipo_docto }}</span>
                     </div>
 
                     <div class="card-body">
@@ -128,10 +161,10 @@
                               <div class="small text-muted">{{ detalle.detallesConsec_dcto.descripcion_item }}</div>
                             </div>
                             <div class="text-end">
-                              <span class="badge bg-secondary">{{ detalle.detallesConsec_dcto.cant_salida | number:
-                                "1.0-2"}}
-                                kg</span><br>
-                              <span class="badge bg-secondary">{{detalle.detallesConsec_dcto.cant_saldo_2}} UND</span>
+                              <span class="badge bg-secondary">{{ (detalle.detallesConsec_dcto.cant_saldo_1 || detalle.detallesConsec_dcto.cant_salida) | number:
+                                "1.2-2"}}
+                                kg saldo</span><br>
+                              <span class="badge bg-secondary" *ngIf="detalle.detallesConsec_dcto.cant_saldo_2">{{detalle.detallesConsec_dcto.cant_saldo_2}} UND</span>
                               <br>
                               <span [ngClass]="{
                   'badge bg-info mt-1': detalle.detallesConsec_dcto.estado_frio === 'CONGELADO',

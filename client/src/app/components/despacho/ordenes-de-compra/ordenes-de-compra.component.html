@@ -3,21 +3,180 @@
     <i class="bx bx-file page-banner-icon"></i>
     <div>
       <h1>Órdenes de compra</h1>
-      <p>Carga EDI de cadenas hacia pedidos SIESA.</p>
+      <p>Carga de archivos EDI (.hse) de cadenas. Quedan listas para agregarse a un cargue.</p>
     </div>
   </div>
 </div>
 
-<div class="despacho-modulo">
-  <div class="card">
-    <div class="card-body">
-      <p class="text-muted mb-2">
-        Carga de archivos EDI enviados por cadenas. Se convierten en pedidos
-        hacia SIESA para despachar y luego se pueden llamar a cargues.
-      </p>
-      <p class="small text-secondary">
-        Módulo en construcción. El detalle se definirá en el siguiente paso.
-      </p>
+<div class="despacho-modulo despacho-modulo--wide">
+  <div class="cargues-acciones d-flex flex-wrap align-items-end gap-2">
+    <label class="mb-0">Bodega origen
+      <select class="form-select form-select-sm" [(ngModel)]="bodegaOrigen">
+        <option value="">Seleccione…</option>
+        <option *ngFor="let b of bodegas" [value]="b.codigo">{{ b.codigo }} — {{ b.nombre }}</option>
+      </select>
+    </label>
+    <label class="cargues-link mb-0" [class.disabled]="importando">
+      {{ importando ? "Importando…" : "Cargar .hse" }}
+      <input type="file" accept=".hse,.txt,text/plain" hidden (change)="onArchivo($event)" [disabled]="importando" />
+    </label>
+  </div>
+
+  <div class="hojas-filtros">
+    <label>Estado
+      <select class="form-select form-select-sm" [(ngModel)]="filtros.estado" (ngModelChange)="cargar()">
+        <option value="aprobado">Aprobadas</option>
+        <option value="despachando">En cargue</option>
+        <option value="despachado">Despachadas</option>
+        <option value="anulado">Anuladas</option>
+        <option value="">Todas</option>
+      </select>
+    </label>
+    <label>Desde
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.desde" (ngModelChange)="cargar()" />
+    </label>
+    <label>Hasta
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.hasta" (ngModelChange)="cargar()" />
+    </label>
+    <label>Buscar
+      <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.q" (keyup.enter)="cargar()" placeholder="OC / tienda / GLN" />
+    </label>
+    <button type="button" class="btn btn-sm btn-outline-primary align-self-end" (click)="cargar()">Filtrar</button>
+  </div>
+
+  <div class="hojas-toolbar d-flex flex-wrap align-items-center gap-2">
+    <button type="button" class="btn btn-primary btn-sm" (click)="imprimirMarcados()" [disabled]="imprimiendo">
+      Imprimir marcadas (PDF)
+    </button>
+    <button type="button" class="btn btn-outline-primary btn-sm" (click)="imprimirTodos()" [disabled]="imprimiendo">
+      Imprimir todas (PDF)
+    </button>
+    <span class="small">
+      Seleccionar:
+      <button type="button" class="btn-link-accion" (click)="seleccionarTodos()">Todos</button>
+      |
+      <button type="button" class="btn-link-accion" (click)="seleccionarNinguno()">Ninguno</button>
+      <span class="text-muted" *ngIf="seleccionCount"> · {{ seleccionCount }} marcada(s)</span>
+    </span>
+  </div>
+
+  <div *ngIf="cargando" class="spinner-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50" color="primary"></mat-progress-spinner>
+  </div>
+
+  <div class="mat-elevation-z4" *ngIf="!cargando">
+    <table class="table table-sm mb-0 cargues-tabla">
+      <thead>
+        <tr>
+          <th></th>
+          <th></th>
+          <th>OC</th>
+          <th>NUM ORDEN</th>
+          <th>FECHA</th>
+          <th>ENT. MIN</th>
+          <th>ENT. MAX</th>
+          <th>NOMBRE ESTABLECIMIENTO</th>
+          <th>RAZÓN SOCIAL</th>
+          <th>GLN / LOCALIZACIÓN</th>
+          <th>UND PEDIDO</th>
+          <th>ESTADO</th>
+          <th>BODEGA</th>
+          <th>LÍNEAS</th>
+          <th>VALOR</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of filas" [class.is-selected]="seleccion.has(row._id)">
+          <td>
+            <input type="checkbox" [checked]="seleccion.has(row._id)" (change)="toggle(row)" />
+          </td>
+          <td class="acciones-cell">
+            <button type="button" class="btn-link-accion" (click)="ver(row)">[ver]</button>
+            <button
+              type="button"
+              class="btn-link-accion"
+              *ngIf="row.estado !== 'anulado' && row.estado !== 'despachado'"
+              (click)="anular(row)"
+            >[anular]</button>
+          </td>
+          <td>{{ row.idEnc }}</td>
+          <td>{{ row.nroPedido }}</td>
+          <td>{{ row.fecha }}</td>
+          <td>{{ row.fechaEntregaDesde || "—" }}</td>
+          <td>{{ row.fechaEntregaHasta || "—" }}</td>
+          <td>{{ row.nombreEstablecimiento || "—" }}</td>
+          <td>{{ row.razonSocial || "—" }}</td>
+          <td>{{ row.glnEntrega || "—" }}</td>
+          <td>{{ row.unidadesPedido || "—" }}</td>
+          <td>{{ row.estado }}</td>
+          <td>{{ row.bodegaOrigen }}</td>
+          <td>{{ row.totalLineas }}</td>
+          <td>{{ row.valor | number : "1.0-0" }}</td>
+        </tr>
+        <tr *ngIf="!filas.length">
+          <td colspan="15" class="text-muted py-3">No hay órdenes con esos filtros. Cargue un archivo .hse.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="cargue-panel" *ngIf="detalle">
+  <div class="cargue-panel-card">
+    <div class="cargue-panel-head">
+      <div>
+        <h5 class="mb-1">{{ detalle.idEnc }} · {{ detalle.archivoNombre }}</h5>
+        <p class="small text-muted mb-0">
+          <strong>{{ detalle.nombreEstablecimiento || "Tienda sin mapear" }}</strong>
+          <span *ngIf="detalle.razonSocial"> · {{ detalle.razonSocial }}</span>
+          · GLN {{ detalle.glnEntrega || "—" }}
+          · Bodega {{ detalle.bodegaOrigen }}
+        </p>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="imprimirDetalle()">Imprimir PDF</button>
+        <button type="button" class="btn-close" (click)="detalle = null"></button>
+      </div>
+    </div>
+    <div class="p-3" *ngIf="detalle.avisos?.length">
+      <p class="small text-warning mb-1" *ngFor="let a of detalle.avisos">{{ a }}</p>
+    </div>
+    <div class="cargue-panel-lista">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>EAN</th>
+            <th>CÓD. CADENA</th>
+            <th>REF. CEM</th>
+            <th>DESCRIPCIÓN</th>
+            <th>CANT</th>
+            <th>UND PEDIDO</th>
+            <th>UND CEM</th>
+            <th>PRECIO</th>
+            <th>MATCH</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let linea of detalle.lineas">
+            <td>{{ linea.nroLinea }}</td>
+            <td>{{ linea.ean || "—" }}</td>
+            <td>{{ linea.codigoComprador || "—" }}</td>
+            <td>{{ linea.referencia || "—" }}</td>
+            <td>{{ linea.descripcion || "—" }}</td>
+            <td>{{ linea.cantidad | number : "1.0-3" }}</td>
+            <td>
+              {{ linea.unidadPedidoEtiqueta || linea.unidadPedido || "—" }}
+              <span class="text-muted" *ngIf="linea.unidadPedido && linea.unidadPedidoEtiqueta && linea.unidadPedido !== linea.unidadPedidoEtiqueta">
+                ({{ linea.unidadPedido }})
+              </span>
+            </td>
+            <td>{{ linea.undInventario || "—" }}</td>
+            <td>{{ linea.precio | number : "1.0-0" }}</td>
+            <td>{{ linea.matched ? "Sí" : "No" }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>

@@ -43,23 +43,23 @@
         <div class="box">
           <h3>PEDIDO</h3>
           <div>{{ linea.unidades || 0 }} unid. pedidas</div>
-          <div>{{ (linea.pesoPedido || 0) | number : "1.1-2" }} kg pedidos</div>
+          <div>{{ (linea.pesoPedido || 0) | number : "1.2-2" }} kg pedidos</div>
         </div>
         <div class="box">
           <h3>DESPACHADO</h3>
           <div>{{ linea.cd || 0 }} unid. despachadas</div>
-          <div>{{ (linea.pd || 0) | number : "1.1-2" }} kg despachados</div>
+          <div>{{ (linea.pd || 0) | number : "1.2-2" }} kg despachados</div>
         </div>
         <div class="box" [attr.data-semaforo]="avance.estado">
           <h3>FALTANTE</h3>
           <div class="piso-semaforo">{{ avance.etiqueta }} · {{ avance.pct | number : "1.0-1" }}%</div>
           <ng-container *ngIf="avance.estado !== 'exceso'; else excesoTpl">
             <div>{{ faltanteUnd }} unid.</div>
-            <div>{{ faltanteKg | number : "1.1-2" }} kg</div>
+            <div>{{ faltanteKg | number : "1.2-2" }} kg</div>
           </ng-container>
           <ng-template #excesoTpl>
             <div>Exceso {{ excesoUnd }} unid.</div>
-            <div>Exceso {{ excesoKg | number : "1.1-2" }} kg</div>
+            <div>Exceso {{ excesoKg | number : "1.2-2" }} kg</div>
           </ng-template>
         </div>
       </div>
@@ -108,7 +108,7 @@
       <button type="button" class="btn-piso piso-tara-ok" (click)="aceptarTara()">
         Aceptar
       </button>
-      <p class="piso-estado">Tara(t) para escribir cantidades · Tara {{ taraTotal | number : "1.1-2" }} kg</p>
+      <p class="piso-estado">Tara(t) para escribir cantidades · Tara {{ taraTotal | number : "1.2-2" }} kg</p>
     </div>
   </div>
 
@@ -128,10 +128,10 @@
       <tr *ngFor="let p of linea.pesajes || []; let i = index">
         <td>{{ i + 1 }}</td>
         <td>{{ p.unidades }}</td>
-        <td>{{ p.peso }}</td>
-        <td>{{ p.tara }}</td>
+        <td>{{ p.peso | number : "1.2-2" }}</td>
+        <td>{{ p.tara | number : "1.2-2" }}</td>
         <td>{{ p.lote }}</td>
-        <td>{{ p.pNeto }}</td>
+        <td>{{ p.pNeto | number : "1.2-2" }}</td>
         <td>
           <button type="button" class="btn-piso" [disabled]="docCerrado" (click)="quitar(p)">quitar</button>
         </td>

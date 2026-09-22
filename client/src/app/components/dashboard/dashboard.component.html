@@ -96,7 +96,7 @@
               <small>{{item.mesa}}</small> &nbsp;
             </td>
             <td>
-              <small>{{item.kg_pesados | number : "1.0-2" }}</small> &nbsp;
+              <small>{{item.kg_pesados | number : "1.2-2" }}</small> &nbsp;
             </td>
             &nbsp;
             <td style="text-align: center;">
@@ -137,7 +137,7 @@
               Kilogramos Brutos
             </p>
             <h5 class="fw-bold">
-              {{ dataDashboard.resumenGeneral.kg_pesados | number : "1.0-2" }}
+              {{ dataDashboard.resumenGeneral.kg_pesados | number : "1.2-2" }}
             </h5>
           </div>
           <div class="col-3 icon d-flex justify-content-end">
@@ -156,7 +156,7 @@
           <div class="col">
             <p class="text-muted fw-medium text-capitalize">Kilogramos Netos</p>
             <h5 class="fw-bold">
-              {{ dataDashboard.resumenGeneral.kg_neto | number : "1.0-2" }}
+              {{ dataDashboard.resumenGeneral.kg_neto | number : "1.2-2" }}
             </h5>
           </div>
           <div class="col-3 icon d-flex justify-content-end">
@@ -301,7 +301,7 @@
                 KILOS NETOS
               </th>
               <td mat-cell *matCellDef="let element">
-                {{ element.kg_neto | number : "1.0-2" }}
+                {{ element.kg_neto | number : "1.2-2" }}
               </td>
             </ng-container>
             <ng-container matColumnDef="suma_unidades">
@@ -314,7 +314,7 @@
               <th mat-header-cell *matHeaderCellDef>PROMEDIO</th>
               <td mat-cell *matCellDef="let element">
                 {{
-                element.kg_neto / element.unidades_contadas | number : "1.0-2"
+                element.kg_neto / element.unidades_contadas | number : "1.2-2"
                 }}
               </td>
             </ng-container>
@@ -397,11 +397,11 @@
                 <div class="row mb-2">
                   <div class="col-6">
                     <small class="text-muted">KG Pesados</small>
-                    <div class="fw-semibold">{{ item.kg_pesados }}</div>
+                    <div class="fw-semibold">{{ item.kg_pesados | number : "1.2-2" }}</div>
                   </div>
                   <div class="col-6">
                     <small class="text-muted">Kilogramos netos</small>
-                    <div class="fw-semibold">{{ item.kg_neto }}</div>
+                    <div class="fw-semibold">{{ item.kg_neto | number : "1.2-2" }}</div>
                   </div>
 
 

@@ -2,7 +2,7 @@ const txt = (value: unknown) => String(value ?? "").trim();
 
 const esTipoPedidoSiesa = (tipo: string) => {
   const t = tipo.toUpperCase();
-  return t.startsWith("PV") || t === "RA";
+  return t.startsWith("PV") || t === "RA" || t === "ST" || t === "OC";
 };
 
 export function etiquetaDocto(tipo?: unknown, nro?: unknown): string {

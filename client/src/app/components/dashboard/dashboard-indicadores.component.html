@@ -18,16 +18,52 @@
 
   <div class="indicadores-kpis">
     <div class="kpi">
-      <small>Kg totales</small>
-      <strong>{{ data.kgTotales | number : "1.0-0" }}</strong>
+      <small>Kg en bodega</small>
+      <strong>{{ (data.kgBodega ?? data.kgTotales) | number : "1.2-2" }}</strong>
+      <span class="kpi-hint">grupo ETC, sin ST</span>
+    </div>
+    <div class="kpi">
+      <small>Kg en tránsito</small>
+      <strong>{{ (data.kgTransito || 0) | number : "1.2-2" }}</strong>
+      <span class="kpi-hint">{{ transitoCargando ? "actualizando ST…" : "mercancía ST" }}</span>
+    </div>
+    <div class="kpi kpi-total">
+      <small>Kg total</small>
+      <strong>{{ (data.kgConTransito ?? data.kgBodega ?? data.kgTotales) | number : "1.2-2" }}</strong>
+      <span class="kpi-hint">{{ transitoCargando ? "bodega; ST en curso" : "bodega + tránsito" }}</span>
+    </div>
+    <div class="kpi">
+      <small>Und en bodega</small>
+      <strong>{{ (data.unidadesBodega || 0) | number : "1.0-0" }}</strong>
+      <span class="kpi-hint">UM2 de producto, sin canastas ni canastillas</span>
+    </div>
+    <div class="kpi">
+      <small>Und en tránsito</small>
+      <strong>{{ (data.unidadesTransito || 0) | number : "1.0-0" }}</strong>
+      <span class="kpi-hint">{{ transitoCargando ? "actualizando ST…" : "mercancía ST" }}</span>
+    </div>
+    <div class="kpi kpi-total">
+      <small>Und total</small>
+      <strong>{{ (data.unidadesConTransito ?? data.unidadesBodega ?? 0) | number : "1.0-0" }}</strong>
+      <span class="kpi-hint">{{ transitoCargando ? "bodega; ST en curso" : "bodega + tránsito" }}</span>
     </div>
     <div class="kpi">
       <small>Kg totales pollo</small>
-      <strong>{{ data.kgPollo | number : "1.0-0" }}</strong>
+      <strong>{{ data.kgPollo | number : "1.2-2" }}</strong>
     </div>
     <div class="kpi">
       <small>Kg totales carnes frías</small>
-      <strong>{{ data.kgCarnesFrias | number : "1.0-0" }}</strong>
+      <strong>{{ data.kgCarnesFrias | number : "1.2-2" }}</strong>
+    </div>
+    <div class="kpi">
+      <small>Canastas</small>
+      <strong>{{ (data.canastas || 0) | number : "1.0-0" }}</strong>
+      <span class="kpi-hint">no suman kg ni unidades</span>
+    </div>
+    <div class="kpi">
+      <small>Canastillas</small>
+      <strong>{{ (data.canastillas || 0) | number : "1.0-0" }}</strong>
+      <span class="kpi-hint">no suman kg ni unidades</span>
     </div>
   </div>
 
@@ -49,11 +85,11 @@
             <tbody>
               <tr>
                 <td>Capacidad</td>
-                <td *ngFor="let item of data.ocupacion">{{ item.capacidad | number : "1.0-0" }}</td>
+                <td *ngFor="let item of data.ocupacion">{{ item.capacidad | number : "1.2-2" }}</td>
               </tr>
               <tr>
                 <td>Kg actuales</td>
-                <td *ngFor="let item of data.ocupacion">{{ item.kg | number : "1.0-0" }}</td>
+                <td *ngFor="let item of data.ocupacion">{{ item.kg | number : "1.2-2" }}</td>
               </tr>
               <tr>
                 <td>% ocupación</td>
@@ -77,6 +113,45 @@
     </div>
   </div>
 
+  <div class="card mt-3" *ngIf="data.bodegasEtc?.length">
+    <div class="card-body">
+      <h6>Kg, unidades y canastas por bodega (grupo ETC)</h6>
+      <div class="table-responsive">
+        <table class="table table-sm indicadores-top">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Bodega</th>
+              <th class="num">Kg</th>
+              <th class="num">Unidades</th>
+              <th class="num">Canastas</th>
+              <th class="num">Canastillas</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of data.bodegasEtc">
+              <td>{{ item.codigo }}</td>
+              <td>{{ item.descripcion }}</td>
+              <td class="num">{{ item.kg | number : "1.2-2" }}</td>
+              <td class="num">{{ (item.unidades || 0) | number : "1.0-0" }}</td>
+              <td class="num">{{ (item.canastas || 0) | number : "1.0-0" }}</td>
+              <td class="num">{{ (item.canastillas || 0) | number : "1.0-0" }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="2">TOTAL ETC</th>
+              <th class="num">{{ (data.kgBodega ?? data.kgTotales) | number : "1.2-2" }}</th>
+              <th class="num">{{ (data.unidadesBodega || 0) | number : "1.0-0" }}</th>
+              <th class="num">{{ (data.canastas || 0) | number : "1.0-0" }}</th>
+              <th class="num">{{ (data.canastillas || 0) | number : "1.0-0" }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="card mt-3">
     <div class="card-body">
       <h6>Top 10 máximo inventario de pollo</h6>
@@ -91,6 +166,7 @@
               <th class="num">Cedi Suroeste</th>
               <th class="num">Cedi Urabá</th>
               <th class="num">Prado</th>
+              <th class="num">Cedi Montería</th>
               <th class="num">Total</th>
             </tr>
           </thead>
@@ -98,12 +174,13 @@
             <tr *ngFor="let item of data.top10">
               <td>{{ item.referencia }}</td>
               <td>{{ item.descripcion }}</td>
-              <td class="num">{{ item.externa | number : "1.0-0" }}</td>
-              <td class="num">{{ item.norte | number : "1.0-0" }}</td>
-              <td class="num">{{ item.suroeste | number : "1.0-0" }}</td>
-              <td class="num">{{ item.uraba | number : "1.0-0" }}</td>
-              <td class="num">{{ item.prado | number : "1.0-0" }}</td>
-              <td class="num fw-bold">{{ item.total | number : "1.0-0" }}</td>
+              <td class="num">{{ item.externa | number : "1.2-2" }}</td>
+              <td class="num">{{ item.norte | number : "1.2-2" }}</td>
+              <td class="num">{{ item.suroeste | number : "1.2-2" }}</td>
+              <td class="num">{{ item.uraba | number : "1.2-2" }}</td>
+              <td class="num">{{ item.prado | number : "1.2-2" }}</td>
+              <td class="num">{{ item.monteria | number : "1.2-2" }}</td>
+              <td class="num fw-bold">{{ item.total | number : "1.2-2" }}</td>
             </tr>
           </tbody>
         </table>

@@ -476,8 +476,10 @@ export class HojaRutaDetalleComponent implements OnInit {
   get usoTexto() {
     const hoja = this.hoja;
     if (!hoja?.capacidadKg) return "Sin capacidad del vehículo";
-    const cargado = Number(hoja.pesoCargado || 0).toFixed(0);
-    const cap = Number(hoja.capacidadKg).toFixed(0);
+    const fmt = (valor: number) =>
+      Number(valor || 0).toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const cargado = fmt(Number(hoja.pesoCargado || 0));
+    const cap = fmt(Number(hoja.capacidadKg));
     return `${cargado} kg / ${cap} kg (${hoja.usoPorcentaje || 0}%)`;
   }
 
