@@ -107,18 +107,27 @@ const metaPaginacion = (payload) => {
   };
 };
 
+const URL_EXISTENCIAS_V3 =
+  "https://servicios.siesacloud.com/api/connekta/v3/ejecutarconsulta";
+const URL_EXISTENCIAS_V31 =
+  "https://servicios.siesacloud.com/api/connekta/v3.1/ejecutarconsulta";
+
 const configExistencias = () => {
   const key = txt(process.env.SIESA_EXISTENCIAS_CONNI_KEY);
   const token = txt(process.env.SIESA_EXISTENCIAS_CONNI_TOKEN);
-  // existencias_por_bodega solo responde en v3; innova_inven_a_la_fecha_FV en v3.1
-  // incompleta (omite PT006/002/011/…). El tablero ETC usa por-bodega en v3.
-  const rawUrl =
-    process.env.SIESA_EXISTENCIAS_BODEGA_BASE_URL ||
-    process.env.SIESA_EXISTENCIAS_BASE_URL ||
-    "https://servicios.siesacloud.com/api/connekta/v3/ejecutarconsulta";
-  const query = extraerQuery(rawUrl);
+  // ETC usa existencias_por_bodega: en v3.1 la Table viene vacía; en v3 sí hay datos.
+  // No heredar SIESA_EXISTENCIAS_BASE_URL si apunta a v3.1 (rompe el tablero en VPS).
+  const rawBodega =
+    txt(process.env.SIESA_EXISTENCIAS_BODEGA_BASE_URL) || URL_EXISTENCIAS_V3;
+  const rawFv =
+    txt(process.env.SIESA_EXISTENCIAS_BASE_URL) || URL_EXISTENCIAS_V31;
+  const baseUrlBodega = normalizarBaseUrl(
+    /\/connekta\/v3\.1\//i.test(rawBodega) ? URL_EXISTENCIAS_V3 : rawBodega
+  );
+  const query = extraerQuery(rawBodega);
   return {
-    baseUrl: normalizarBaseUrl(rawUrl),
+    baseUrl: baseUrlBodega,
+    baseUrlFv: normalizarBaseUrl(rawFv),
     idCompania:
       process.env.SIESA_EXISTENCIAS_ID_COMPANIA ||
       query.idCompania ||
@@ -573,10 +582,17 @@ export const totalCanastasEtc = (filas = []) =>
 export const consultarExistenciasPorBodega = async (bodega, { log = true } = {}) => {
   const codigo = txt(bodega);
   if (!codigo) return [];
-  const mapped = await inventarioFecha();
-  const filas = mapped.filter(
-    (row) => normalizarCodigoBodega(row.codigo_bodega) === normalizarCodigoBodega(codigo)
-  );
+  // Si el cache ETC está caliente, filtra; si no, baja solo esa bodega (más rápido en VPS).
+  if (cacheInventario.mapped && Date.now() - cacheInventario.at < CACHE_MS) {
+    const filas = cacheInventario.mapped.filter(
+      (row) => normalizarCodigoBodega(row.codigo_bodega) === normalizarCodigoBodega(codigo)
+    );
+    if (log) {
+      console.log(`[existencias-siesa] bodega ${codigo} (cache): ${filas.length} filas`);
+    }
+    return filas;
+  }
+  const filas = await enriquecerConItems(await descargarExistenciasPorBodega(codigo));
   if (log) {
     console.log(`[existencias-siesa] bodega ${codigo}: ${filas.length} filas`);
   }
