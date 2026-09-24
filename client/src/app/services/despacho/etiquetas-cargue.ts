@@ -629,18 +629,22 @@ export const imprimirEtiquetasDePesaje = async (
     }) => Observable<any>;
     enviarTspl?: (tsplBase64: string) => Observable<any>;
     linea?: any;
+    /** Si false, no pregunta confirmación. */
+    confirmar?: boolean;
   }
-) => {
+): Promise<{ ok: boolean; desde: number; hasta: number } | false> => {
   const n = Math.max(0, Math.floor(Number(nuevasCanastas) || 0));
   if (!doc || !documentoPuedeEtiquetas(doc) || n < 1) return false;
-  const r = await Swal.fire({
-    title: "Imprimir canastas",
-    text: `Este pesaje trae ${n} canasta(s). ¿Imprimir etiqueta(s) ahora?`,
-    showCancelButton: true,
-    confirmButtonText: "Imprimir",
-    cancelButtonText: "Después",
-  });
-  if (!r.isConfirmed) return false;
+  if (opts.confirmar !== false) {
+    const r = await Swal.fire({
+      title: "Imprimir canastas",
+      text: `Este pesaje trae ${n} canasta(s). ¿Imprimir etiqueta(s) ahora?`,
+      showCancelButton: true,
+      confirmButtonText: "Imprimir",
+      cancelButtonText: "Después",
+    });
+    if (!r.isConfirmed) return false;
+  }
   try {
     const res = await firstValueFrom(
       opts.registrar({
@@ -657,13 +661,14 @@ export const imprimirEtiquetasDePesaje = async (
     const nums = (imprimir as any[]).map((e) => Number(e.canastaNum) || 0).filter(Boolean);
     const desde = nums.length ? Math.min(...nums) : 1;
     const hasta = nums.length ? Math.max(...nums) : n;
-    return abrirImpresionEtiquetas(doc, registradas.length || hasta, registradas, {
+    await abrirImpresionEtiquetas(doc, registradas.length || hasta, registradas, {
       enviarTspl: opts.enviarTspl,
       desdeCanasta: desde,
       hastaCanasta: hasta,
       incluirPadre: Boolean(res?.body?.incluirPadre),
       linea: opts.linea,
     });
+    return { ok: true, desde, hasta };
   } catch (err: any) {
     await Swal.fire({
       icon: "error",
@@ -671,4 +676,64 @@ export const imprimirEtiquetasDePesaje = async (
     });
     return false;
   }
+};
+
+/**
+ * Botón por pesaje: imprime (o reimprime) etiquetas de ese pesaje
+ * con producto/peso de la línea-pesaje.
+ */
+export const imprimirEtiquetaDeUnPesaje = async (
+  doc: any,
+  pesaje: any,
+  opts: {
+    cargueId: string;
+    registrar: (payload: {
+      cargueId: string;
+      docId: string;
+      nuevasCanastas: number;
+    }) => Observable<any>;
+    enviarTspl?: (tsplBase64: string) => Observable<any>;
+    linea?: any;
+  }
+) => {
+  if (!doc || !pesaje || !documentoPuedeEtiquetas(doc)) {
+    await Swal.fire({ icon: "info", title: "Este documento no admite etiquetas." });
+    return false;
+  }
+  const n = Math.max(1, contarCanastasEnDetalle(pesaje?.taraDetalle));
+  const lineaCtx = opts.linea
+    ? { ...opts.linea, pesajes: [pesaje] }
+    : { pesajes: [pesaje] };
+
+  const desdePrev = Number(pesaje.etiquetaDesde) || 0;
+  const hastaPrev = Number(pesaje.etiquetaHasta) || 0;
+  const regs = Array.isArray(doc.etiquetasCanasta) ? doc.etiquetasCanasta : [];
+  if (desdePrev >= 1 && hastaPrev >= desdePrev && regs.length >= hastaPrev) {
+    const r = await Swal.fire({
+      title: "Reimprimir etiquetas",
+      text: `${hastaPrev - desdePrev + 1} etiqueta(s) de este pesaje.`,
+      showCancelButton: true,
+      confirmButtonText: "Imprimir",
+      cancelButtonText: "Cancelar",
+    });
+    if (!r.isConfirmed) return false;
+    return abrirImpresionEtiquetas(doc, regs.length, regs, {
+      enviarTspl: opts.enviarTspl,
+      desdeCanasta: desdePrev,
+      hastaCanasta: hastaPrev,
+      incluirPadre: false,
+      linea: lineaCtx,
+    });
+  }
+
+  const res = await imprimirEtiquetasDePesaje(doc, n, {
+    ...opts,
+    linea: lineaCtx,
+    confirmar: true,
+  });
+  if (res && typeof res === "object" && res.ok) {
+    pesaje.etiquetaDesde = res.desde;
+    pesaje.etiquetaHasta = res.hasta;
+  }
+  return res;
 };

@@ -12,6 +12,7 @@ import { AgenteBasculaService, EstadoBascula } from "../../services/agente-bascu
 import { SocketService } from "../../services/socket/socket.service";
 import {
   contarCanastasEnDetalle,
+  imprimirEtiquetaDeUnPesaje,
   imprimirEtiquetasDePesaje,
 } from "../../services/despacho/etiquetas-cargue";
 import { enviarTsplRed } from "../../services/despacho/enviar-tspl-red";
@@ -566,13 +567,18 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
           this.resetTaras();
           this.pesoManual = null;
           if (canastasPesaje > 0 && this.doc) {
-            await imprimirEtiquetasDePesaje(this.doc, canastasPesaje, {
+            const ultimo = (this.linea?.pesajes || [])[(this.linea?.pesajes || []).length - 1];
+            const resImp = await imprimirEtiquetasDePesaje(this.doc, canastasPesaje, {
               cargueId: this.cargueId,
               registrar: (payload) => this.piso.registrarEtiquetas(payload),
               enviarTspl: (tsplBase64) =>
                 enviarTsplRed(tsplBase64, { piso: this.piso, agente: this.agente }),
               linea: this.linea,
             });
+            if (resImp && typeof resImp === "object" && resImp.ok && ultimo) {
+              ultimo.etiquetaDesde = resImp.desde;
+              ultimo.etiquetaHasta = resImp.hasta;
+            }
           }
         },
         error: (err) => {
@@ -605,6 +611,21 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
         error: (err) =>
           Swal.fire({ icon: "error", title: mensajeApi(err, "No se pudo quitar el pesaje.") }),
       });
+  }
+
+  async imprimirPesaje(p: any) {
+    if (!this.doc || !p) return;
+    if (this.linea?.omitido) {
+      Swal.fire({ icon: "info", title: "Producto omitido", text: "No se pueden imprimir etiquetas." });
+      return;
+    }
+    await imprimirEtiquetaDeUnPesaje(this.doc, p, {
+      cargueId: this.cargueId,
+      registrar: (payload) => this.piso.registrarEtiquetas(payload),
+      enviarTspl: (tsplBase64) =>
+        enviarTsplRed(tsplBase64, { piso: this.piso, agente: this.agente }),
+      linea: this.linea,
+    });
   }
 
   async repesar() {

@@ -133,6 +133,7 @@
         <td>{{ p.lote }}</td>
         <td>{{ p.pNeto | number : "1.2-2" }}</td>
         <td>
+          <button type="button" class="btn-piso" (click)="imprimirPesaje(p)">etiqueta</button>
           <button type="button" class="btn-piso" [disabled]="docCerrado" (click)="quitar(p)">quitar</button>
         </td>
       </tr>
