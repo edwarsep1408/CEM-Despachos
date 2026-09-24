@@ -3,13 +3,13 @@ import { CommonModule } from "@angular/common";
 import { ActivatedRoute, Router, RouterModule } from "@angular/router";
 import { PisoService } from "../../services/despacho/piso.service";
 import { MotivosOmisionService } from "../../services/despacho/motivos-omision.service";
-import { documentoListoParaEtiquetas, pedirYImprimirEtiquetas } from "../../services/despacho/etiquetas-cargue";
+import { documentoPuedeEtiquetas, pedirYImprimirEtiquetas } from "../../services/despacho/etiquetas-cargue";
+import { enviarTsplRed } from "../../services/despacho/enviar-tspl-red";
 import { AgenteBasculaService } from "../../services/agente-bascula/agente-bascula.service";
 import { PisoBrandComponent } from "./piso-brand.component";
 import { atajoBloqueado, confirmarRepesar, documentoCerrado, etiquetaCargue, mensajeApi, pedirMotivoOmision } from "./piso-ui";
 import { etiquetaPedido } from "../../core/etiqueta-docto";
 import Swal from "sweetalert2";
-import { catchError, throwError } from "rxjs";
 
 @Component({
   selector: "app-portal-documentos",
@@ -64,7 +64,7 @@ export class PortalDocumentosComponent implements OnInit {
   }
 
   listoParaEtiquetas(row: any) {
-    return documentoListoParaEtiquetas(row);
+    return documentoPuedeEtiquetas(row);
   }
 
   async imprimirEtiquetas(row: any, ev?: Event) {
@@ -72,17 +72,8 @@ export class PortalDocumentosComponent implements OnInit {
     await pedirYImprimirEtiquetas(row, {
       cargueId: this.cargueId,
       registrar: (payload) => this.piso.registrarEtiquetas(payload),
-      // PC de piso → agente :3920 → TSC 192.168.1.35 (misma LAN). Fallback API si el agente no responde.
       enviarTspl: (tsplBase64) =>
-        this.agente.imprimirTspl({ tsplBase64 }).pipe(
-          catchError((err) => {
-            const offline =
-              err?.status === 0 ||
-              /Failed to fetch|Http failure|ERR_CONNECTION/i.test(String(err?.message || ""));
-            if (!offline) return throwError(() => err);
-            return this.piso.imprimirTspl({ tsplBase64 });
-          })
-        ),
+        enviarTsplRed(tsplBase64, { piso: this.piso, agente: this.agente }),
     });
   }
 

@@ -16,7 +16,7 @@
     <div><b>FECHA:</b> {{ doc.fecha }}</div>
     <div><b>HORA:</b> {{ doc.hora }}</div>
     <div><b>OBSERVACION:</b> {{ doc.observacion }}</div>
-    <div *ngIf="listoParaEtiquetas"><b>CANASTAS:</b> {{ canastas || "—" }}</div>
+    <div *ngIf="canastas"><b>CANASTAS:</b> {{ canastas }}</div>
   </div>
 
   <table *ngIf="lineas.length">

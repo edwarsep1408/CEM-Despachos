@@ -3,5 +3,7 @@ export interface Environment {
   apiUrl: string;
   socketUrl: string;
   agenteBasculaUrl?: string;
+  /** En muelle: true (PC → agente → TSC). En local: false (API → TSC). */
+  impresoraViaAgente?: boolean;
   ssoEnabled?: boolean;
 }

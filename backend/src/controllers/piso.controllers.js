@@ -13,13 +13,14 @@ import {
 } from "../services/piso.servicios";
 import { marcarOrigenDespachado, marcarOrigenDespachando } from "../services/origenDespacho.servicios";
 import { armarEtiquetasCanasta } from "../services/etiquetasCanasta.servicios";
-import { configImpresoraTsc, enviarTspl } from "../services/impresoraTsc.servicios";
+import { configImpresoraTsc, enviarTspl, armarTsplPruebaHija } from "../services/impresoraTsc.servicios";
 import {
   enriquecerDocumentosVidaUtil,
   fechaVencimientoDe,
   parsearFechaLote,
   vidaUtilDeProducto,
 } from "../services/vidaUtil.servicios";
+import { resolverLocalizacionParaDoc } from "./localizaciones.controllers";
 
 const pisoCtr = {};
 
@@ -160,6 +161,12 @@ const presentarDocumento = (doc, idCargue) => {
     vendedor: doc.vendedor || "",
     observacion: doc.observacion || "",
     contacto: doc.contacto || "",
+    gln: doc.gln || doc.glnEntrega || "",
+    codigoDep: doc.codigoDep || doc.codigoEstablecimiento || "",
+    codigoEstablecimiento: doc.codigoEstablecimiento || doc.codigoDep || "",
+    dependencia: doc.dependencia || "",
+    zona: doc.zona || "",
+    cadena: doc.cadena || doc.razonSocial || "",
     omitido: !!doc.omitido,
     motivoOmision: doc.motivoOmision || "",
     estadoDespacho: doc.omitido
@@ -168,6 +175,38 @@ const presentarDocumento = (doc, idCargue) => {
     etiquetasCanasta: Array.isArray(doc.etiquetasCanasta) ? doc.etiquetasCanasta : [],
     lineas,
   };
+};
+
+const enriquecerDocumentoLocalizacion = async (docPresentado) => {
+  if (!docPresentado) return docPresentado;
+  if (docPresentado.codigoDep && docPresentado.zona && docPresentado.dependencia) {
+    return docPresentado;
+  }
+  try {
+    const loc = await resolverLocalizacionParaDoc(docPresentado);
+    if (!loc) return docPresentado;
+    return {
+      ...docPresentado,
+      codigoDep: docPresentado.codigoDep || loc.codigoDep || "",
+      codigoEstablecimiento:
+        docPresentado.codigoEstablecimiento || loc.codigoEstablecimiento || "",
+      dependencia:
+        docPresentado.dependencia || loc.dependencia || loc.nombreEstablecimiento || "",
+      zona: docPresentado.zona || loc.zona || "",
+      cadena: docPresentado.cadena || loc.cadena || loc.razonSocial || "",
+      gln: docPresentado.gln || loc.gln || "",
+    };
+  } catch (_) {
+    return docPresentado;
+  }
+};
+
+const enriquecerDocumentosLocalizacion = async (docs = []) => {
+  const out = [];
+  for (const doc of docs) {
+    out.push(await enriquecerDocumentoLocalizacion(doc));
+  }
+  return out;
 };
 
 const presentarCargue = (cargue) => ({
@@ -225,6 +264,7 @@ pisoCtr.getCargue = async (req, res) => {
     await hidratarCargue(cargue);
     const body = presentarCargue(cargue);
     body.documentos = await enriquecerDocumentosVidaUtil(body.documentos);
+    body.documentos = await enriquecerDocumentosLocalizacion(body.documentos);
     return ok(res, body);
   } catch (error) {
     console.error("getCarguePiso:", error.message);
@@ -495,10 +535,10 @@ pisoCtr.finalizarDocumento = async (req, res) => {
 
 pisoCtr.registrarEtiquetas = async (req, res) => {
   try {
-    const { cargueId, docId, totalCanastas } = req.body || {};
-    const total = Math.floor(Number(totalCanastas) || 0);
+    const { cargueId, docId } = req.body || {};
+    const nuevasCanastas = Math.floor(Number(req.body?.nuevasCanastas) || 0);
+    const totalPedido = Math.floor(Number(req.body?.totalCanastas) || 0);
     if (!cargueId || !docId) return fail(res, "Falta el documento.", 400);
-    if (total < 1) return fail(res, "Indique cuántas canastas imprimir.", 400);
     const cargue = await carguesModel.findById(cargueId);
     if (!cargue || cargue.estado !== "enviado") return fail(res, "No se encontró el cargue.", 404);
     if (!puedeVerCargue(cargue, identityDe(req))) {
@@ -508,15 +548,39 @@ pisoCtr.registrarEtiquetas = async (req, res) => {
     if (!doc) return fail(res, "No se encontró el documento.", 404);
     if (doc.omitido) return fail(res, "Este documento ya fue omitido.", 400);
     doc.lineas = (doc.lineas || []).map(normalizarLineaPiso);
-    const pendientes = (doc.lineas || []).filter((l) => !l.omitido && l.estadoDespacho === "PEND");
-    if (pendientes.length) {
-      return fail(res, "Termine de pesar el documento para imprimir etiquetas.", 400);
-    }
+    // Se puede etiquetar sin terminar el documento (canasta a canasta en pesaje).
     if (!String(doc.tipoDocto || "").trim() && String(doc.tipo || "").toUpperCase() === "PEDIDO") {
       const pedido = await pedidosModel.findOne({ idEnc: String(doc.idEnc) }, { tipoDocto: 1 }).lean();
       if (pedido?.tipoDocto) doc.tipoDocto = pedido.tipoDocto;
     }
-    const etiquetas = armarEtiquetasCanasta(doc, total);
+
+    const previas = Array.isArray(doc.etiquetasCanasta) ? doc.etiquetasCanasta : [];
+    const ya = previas.length;
+    let totalFinal = ya;
+    let desdeImprimir = 1;
+    let incluirPadre = true;
+
+    if (nuevasCanastas > 0) {
+      totalFinal = ya + nuevasCanastas;
+      desdeImprimir = ya + 1;
+      incluirPadre = ya === 0;
+    } else if (totalPedido > 0) {
+      totalFinal = Math.max(totalPedido, ya);
+      if (totalPedido > ya) {
+        desdeImprimir = ya + 1;
+        incluirPadre = ya === 0;
+      } else {
+        // Reimpresión completa del total pedido
+        desdeImprimir = 1;
+        incluirPadre = true;
+        totalFinal = totalPedido;
+      }
+    } else {
+      return fail(res, "Indique cuántas canastas imprimir.", 400);
+    }
+    if (totalFinal < 1) return fail(res, "Indique cuántas canastas imprimir.", 400);
+
+    const etiquetas = armarEtiquetasCanasta(doc, totalFinal);
     const vistos = new Set();
     for (const et of etiquetas) {
       if (vistos.has(et.codigo)) {
@@ -528,9 +592,16 @@ pisoCtr.registrarEtiquetas = async (req, res) => {
     cargue.markModified("documentos");
     cargue.fecha_actualizacion = new Date();
     await cargue.save();
+    const etiquetasImprimir = etiquetas.filter((e) => Number(e.canastaNum) >= desdeImprimir);
+    const documento = await enriquecerDocumentoLocalizacion(
+      presentarDocumento(doc, cargue.idCargue)
+    );
     return ok(res, {
-      documento: presentarDocumento(doc, cargue.idCargue),
+      documento,
       etiquetas,
+      etiquetasImprimir,
+      incluirPadre,
+      desdeCanasta: desdeImprimir,
     });
   } catch (error) {
     console.error("registrarEtiquetasPiso:", error.message);
@@ -564,6 +635,36 @@ pisoCtr.imprimirTspl = async (req, res) => {
   } catch (error) {
     console.error("imprimirTsplPiso:", error.message);
     return fail(res, error.message || "No se pudo imprimir en la TSC.", 502);
+  }
+};
+
+/** Prueba rápida con layout del banderín 304×60 + logo Pollocoa. */
+pisoCtr.probarImpresora = async (req, res) => {
+  try {
+    const cfg = configImpresoraTsc();
+    const destino = {
+      ip: String(req.body?.ip || "").trim() || cfg.ip,
+      puerto: Number(req.body?.puerto) || cfg.puerto,
+    };
+    const buffer = armarTsplPruebaHija({
+      ip: destino.ip,
+      texto: String(req.body?.texto || req.body?.producto || "PRUEBA CEM").trim() || "PRUEBA CEM",
+      plu: String(req.body?.plu || "").trim() || undefined,
+      pesoKg: String(req.body?.pesoKg || req.body?.peso || "").trim() || undefined,
+      dependencia: String(req.body?.dependencia || "").trim() || undefined,
+      zona: String(req.body?.zona || "").trim() || undefined,
+      codigoDep: String(req.body?.codigoDep || "").trim() || undefined,
+      qr: String(req.body?.qr || "").trim() || undefined,
+    });
+    const result = await enviarTspl(buffer, destino);
+    return ok(res, {
+      message: `Prueba enviada a TSC ${result.ip}:${result.puerto}`,
+      ...result,
+      conLogo: buffer.length > 1000,
+    });
+  } catch (error) {
+    console.error("probarImpresoraTsc:", error.message);
+    return fail(res, error.message || "No se pudo imprimir la prueba en la TSC.", 502);
   }
 };
 

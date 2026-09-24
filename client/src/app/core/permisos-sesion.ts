@@ -11,6 +11,7 @@ export const RUTAS_POR_PERMISO: { codigo: string; ruta: string }[] = [
   { codigo: "despacho.hojas-ruta", ruta: "/configuracion/despacho/hojas-de-ruta" },
   { codigo: "despacho.ordenes-compra", ruta: "/configuracion/despacho/ordenes-de-compra" },
   { codigo: "despacho.codigos-ean", ruta: "/configuracion/despacho/codigos-ean" },
+  { codigo: "despacho.localizaciones", ruta: "/configuracion/despacho/localizaciones" },
   { codigo: "despacho.motivos", ruta: "/configuracion/despacho/motivos-omision" },
   { codigo: "despacho.taras", ruta: "/configuracion/despacho/taras-empaques" },
   { codigo: "despacho.aviso", ruta: "/configuracion/despacho/aviso-despacho" },

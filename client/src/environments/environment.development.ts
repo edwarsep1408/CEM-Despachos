@@ -7,5 +7,7 @@ export const environment: Environment = {
   apiUrl: `${host}:3020/api/v1`,
   socketUrl: `${host}:3020`,
   agenteBasculaUrl: "http://127.0.0.1:3920",
+  // Piso/VPS: PC del muelle → agente → TSC en LAN.
+  impresoraViaAgente: true,
   ssoEnabled: false,
 };

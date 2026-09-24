@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import codigosEanModel from "../models/codigosEan.models";
 import itemsModel from "../models/items.models";
+import { resolverLocalizacionPorGln } from "./localizaciones.controllers";
 
 const ok = (res, body, status = 200) =>
   res.status(status).json({ status, body, error: false });
@@ -130,10 +131,12 @@ export const resolverItemPorEan = async (ean, glnOCliente = "") => {
   };
 };
 
-/** En el CSV, cuando localizacion es GLN, cliente trae el nombre de la tienda (ej. 726-CARULLA TESORO). */
+/** Prioriza catálogo localizaciones; si no hay, cae a códigos EAN (localizacion=GLN). */
 export const resolverTiendaPorGln = async (gln) => {
   const codigo = txt(gln);
   if (!codigo || codigo.length < 8) return null;
+  const desdeLoc = await resolverLocalizacionPorGln(codigo);
+  if (desdeLoc?.nombreEstablecimiento) return desdeLoc;
   const fila = await codigosEanModel
     .findOne({
       estado: 0,

@@ -15,5 +15,6 @@ router.put("/put-piso-repesar", permiso, pisoCtr.repesar);
 router.put("/put-piso-finalizar-documento", permiso, pisoCtr.finalizarDocumento);
 router.put("/put-piso-etiquetas", permiso, pisoCtr.registrarEtiquetas);
 router.post("/post-piso-imprimir-tspl", permiso, pisoCtr.imprimirTspl);
+router.post("/post-piso-probar-impresora", permiso, pisoCtr.probarImpresora);
 
 export default router;

@@ -65,7 +65,8 @@ export class PisoService {
   registrarEtiquetas(payload: {
     cargueId: string;
     docId: string;
-    totalCanastas: number;
+    totalCanastas?: number;
+    nuevasCanastas?: number;
   }): Observable<any> {
     return this.http.put(`${this.url}/put-piso-etiquetas`, payload);
   }
@@ -73,5 +74,10 @@ export class PisoService {
   /** Envía bytes TSPL a la TSC MH241T de red (vía API → IP:9100). */
   imprimirTspl(payload: { tsplBase64: string; ip?: string; puerto?: number }): Observable<any> {
     return this.http.post(`${this.url}/post-piso-imprimir-tspl`, payload);
+  }
+
+  /** Prueba mínima a la TSC (sin documento). */
+  probarImpresora(payload: { ip?: string; puerto?: number } = {}): Observable<any> {
+    return this.http.post(`${this.url}/post-piso-probar-impresora`, payload);
   }
 }

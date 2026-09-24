@@ -1,0 +1,109 @@
+<div class="page-banner">
+  <div class="page-banner-inner">
+    <i class="bx bx-map page-banner-icon"></i>
+    <div>
+      <h1>Localizaciones</h1>
+      <p>Sedes de cadenas: código Dep, GLN EDI, dependencia, cadena y zona.</p>
+    </div>
+  </div>
+</div>
+
+<div class="despacho-modulo despacho-modulo--wide">
+  <div class="cargues-acciones d-flex flex-wrap gap-2 align-items-center">
+    <button type="button" class="cargues-link" (click)="abrirNuevo()">Agregar</button>
+    <label class="cargues-link mb-0" [class.disabled]="importando">
+      {{ importando ? "Importando…" : "Importar Excel/CSV" }}
+      <input
+        type="file"
+        accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+        hidden
+        (change)="onArchivo($event)"
+        [disabled]="importando"
+      />
+    </label>
+    <button type="button" class="cargues-link" (click)="importarPlantilla()" [disabled]="importando">
+      Cargar Libro del servidor
+    </button>
+  </div>
+
+  <div class="hojas-filtros">
+    <label>Buscar
+      <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.q" placeholder="GLN / sede / código" />
+    </label>
+    <label>Cadena
+      <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.cadena" />
+    </label>
+    <label>Zona
+      <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.zona" />
+    </label>
+  </div>
+
+  <div *ngIf="cargando" class="spinner-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50" color="primary"></mat-progress-spinner>
+  </div>
+
+  <div class="mat-elevation-z4" *ngIf="!cargando">
+    <table class="table table-sm mb-0 cargues-tabla">
+      <thead>
+        <tr>
+          <th></th>
+          <th>ID</th>
+          <th>CÓD. DEP</th>
+          <th>GLN / LOCALIZACIÓN EDI</th>
+          <th>DEPENDENCIA</th>
+          <th>CADENA</th>
+          <th>ZONA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of visibles">
+          <td class="acciones-cell">
+            <button type="button" class="btn-link-accion" (click)="abrirEditar(row)">[editar]</button>
+            <button type="button" class="btn-link-accion" (click)="eliminar(row)">[inactivar]</button>
+          </td>
+          <td>{{ row.idLocalizacion }}</td>
+          <td>{{ row.codigoDep || "—" }}</td>
+          <td>{{ row.gln || "—" }}</td>
+          <td>{{ row.dependencia }}</td>
+          <td>{{ row.cadena || "—" }}</td>
+          <td>{{ row.zona || "—" }}</td>
+        </tr>
+        <tr *ngIf="!visibles.length">
+          <td colspan="7" class="text-muted py-3">
+            Sin registros. Importe el Libro (.xlsx) o cargue la plantilla del servidor.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="cargue-panel" *ngIf="panel">
+  <div class="cargue-panel-card">
+    <div class="cargue-panel-head">
+      <h5 class="mb-0">{{ panel === "editar" ? "Editar localización" : "Nueva localización" }}</h5>
+      <button type="button" class="btn-close" (click)="cancelar()"></button>
+    </div>
+    <div class="p-3 d-flex flex-column gap-2">
+      <label>Código Dep
+        <input class="form-control form-control-sm" [(ngModel)]="form.codigoDep" />
+      </label>
+      <label>GLN / Localización EDI
+        <input class="form-control form-control-sm" [(ngModel)]="form.gln" />
+      </label>
+      <label>Dependencia (sede)
+        <input class="form-control form-control-sm" [(ngModel)]="form.dependencia" />
+      </label>
+      <label>Cadena
+        <input class="form-control form-control-sm" [(ngModel)]="form.cadena" />
+      </label>
+      <label>Zona
+        <input class="form-control form-control-sm" [(ngModel)]="form.zona" />
+      </label>
+      <div class="d-flex gap-2 mt-2">
+        <button type="button" class="btn btn-primary btn-sm" (click)="guardar()">Guardar</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cancelar()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>

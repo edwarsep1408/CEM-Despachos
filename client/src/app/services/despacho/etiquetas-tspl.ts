@@ -1,4 +1,4 @@
-/** TSPL2 TSC MH241T — plantillas BarTender 22/07/2026 (304 × 60 mm). */
+/** TSPL2 TSC MH241T — banderín 304 × 60 mm (estilo etiqueta canasta Pollocoa). */
 
 const ENC = new TextEncoder();
 
@@ -20,11 +20,11 @@ const PREAMBULO = [
   "CLS",
 ].join("\r\n");
 
-const escTspl = (value: unknown) =>
+const escTspl = (value: unknown, max = 80) =>
   String(value ?? "")
     .replace(/\r|\n/g, " ")
     .replace(/"/g, "'")
-    .slice(0, 80);
+    .slice(0, max);
 
 const concat = (partes: Uint8Array[]) => {
   const total = partes.reduce((n, p) => n + p.length, 0);
@@ -54,13 +54,27 @@ export const cargarBitmapHija = () => cargarBitmap("hija");
 export const cargarBitmapPadre = () => cargarBitmap("padre");
 
 export type CamposBanderinHija = {
+  /** Nombre del producto (ej. HIGADO GRANEL COA) o cliente en etiqueta general. */
   productLongName: string;
-  referencia: string;
-  loadName: string;
-  stateProduct: string;
-  consecutive: string;
-  enterpriseClientName: string;
+  /** PLU / código comprador (solo Éxito). */
+  plu?: string;
+  /** Peso con unidad, ej. "12.45 Kg" (solo Éxito). */
+  pesoKg?: string;
+  /** Código Dep de la sede (solo Éxito, grande a la derecha). */
+  codigoDep?: string;
+  /** Nombre de la dependencia / tienda (solo Éxito). */
+  dependencia?: string;
+  /** Zona (solo Éxito). */
+  zona?: string;
+  /** Código canasta (va en el QR). */
   barcode: string;
+  /** true = layout Éxito (producto/PLU/DEP); false = layout general actual. */
+  estiloExito?: boolean;
+  referencia?: string;
+  loadName?: string;
+  stateProduct?: string;
+  consecutive?: string;
+  enterpriseClientName?: string;
 };
 
 export type CamposBanderinPadre = {
@@ -73,8 +87,17 @@ export type CamposBanderinPadre = {
   date: string;
 };
 
-/** Etiqueta hija (1 por canasta) — plantilla_etiquetahija22072026.prn */
-export const tsplBanderinHija = (campos: CamposBanderinHija, bitmap: Uint8Array) => {
+const tamanoDep = (dep: string): [number, number] => {
+  const n = dep.length;
+  // Destaca, pero cede espacio al QR
+  if (n <= 3) return [32, 36];
+  if (n <= 4) return [26, 30];
+  if (n <= 5) return [22, 24];
+  return [18, 20];
+};
+
+/** Etiqueta hija genérica (pedidos / clientes distintos de Éxito). */
+const tsplBanderinHijaGeneral = (campos: CamposBanderinHija, bitmap: Uint8Array) => {
   const partes: Uint8Array[] = [ENC.encode(`${PREAMBULO}\r\n`)];
   if (bitmap.length) {
     partes.push(ENC.encode("BITMAP 152,2060,19,336,1,"));
@@ -82,12 +105,12 @@ export const tsplBanderinHija = (campos: CamposBanderinHija, bitmap: Uint8Array)
     partes.push(ENC.encode("\r\n"));
   }
   const qr = escTspl(campos.barcode);
-  const nombre = escTspl(campos.productLongName || "SIN CLIENTE");
+  const nombre = escTspl(campos.productLongName || campos.enterpriseClientName || "SIN CLIENTE");
   const cliente = escTspl(campos.enterpriseClientName || nombre);
   const ref = escTspl(campos.referencia);
   const load = escTspl(campos.loadName);
   const estado = escTspl(campos.stateProduct);
-  const consec = escTspl(campos.consecutive);
+  const consec = escTspl(campos.consecutive || campos.barcode);
   const cmds = [
     `QRCODE 332,1783,L,10,A,90,M2,S7,"${qr}"`,
     "CODEPAGE 1252",
@@ -103,6 +126,54 @@ export const tsplBanderinHija = (campos: CamposBanderinHija, bitmap: Uint8Array)
   partes.push(ENC.encode(cmds));
   return concat(partes);
 };
+
+/**
+ * Etiqueta hija Éxito — lectura horizontal del banderín:
+ * izq (tras el orificio): producto, PLU, logo, tienda, zona
+ * der: DEP grande arriba + QR abajo
+ */
+const tsplBanderinHijaExito = (campos: CamposBanderinHija, bitmap: Uint8Array) => {
+  const partes: Uint8Array[] = [ENC.encode(`${PREAMBULO}\r\n`)];
+  if (bitmap.length) {
+    // Logo un poco más abajo (menor X al leer horizontal).
+    partes.push(ENC.encode("BITMAP 155,1280,19,336,1,"));
+    partes.push(bitmap);
+    partes.push(ENC.encode("\r\n"));
+  }
+  const qr = escTspl(campos.barcode, 48);
+  const producto = escTspl(
+    campos.productLongName || campos.enterpriseClientName || "SIN PRODUCTO",
+    30
+  );
+  const plu = escTspl(campos.plu || "", 14);
+  const pesoKg = escTspl(campos.pesoKg || "", 16);
+  const dep = escTspl(campos.codigoDep || "", 8);
+  const tienda = escTspl(campos.dependencia || campos.enterpriseClientName || "", 28);
+  const zona = escTspl(campos.zona || "", 20);
+  const [fx, fy] = tamanoDep(dep);
+  const depTxt = dep ? `DEP: ${dep}` : "";
+  // Y>=1100: fuera del orificio. QR: mismo tamaño, más arriba (mayor X).
+  const cmds = [
+    "CODEPAGE 1252",
+    `TEXT 400,1100,"0",90,20,22,"${producto}"`,
+    plu ? `TEXT 345,1100,"0",90,11,12,"PLU: ${plu}"` : "",
+    pesoKg ? `TEXT 295,1100,"0",90,12,13,"${pesoKg}"` : "",
+    tienda ? `TEXT 115,1100,"0",90,11,12,"${tienda}"` : "",
+    zona ? `TEXT 70,1100,"0",90,10,11,"${zona}"` : "",
+    depTxt ? `TEXT 410,1780,"0",90,${fx},${fy},"${depTxt}"` : "",
+    `QRCODE 285,1760,L,12,A,90,M2,S7,"${qr}"`,
+    "PRINT 1,1",
+    "",
+  ]
+    .filter(Boolean)
+    .join("\r\n");
+  partes.push(ENC.encode(cmds));
+  return concat(partes);
+};
+
+/** Etiqueta hija (1 por canasta). Éxito usa layout DEP; el resto el genérico. */
+export const tsplBanderinHija = (campos: CamposBanderinHija, bitmap: Uint8Array) =>
+  campos.estiloExito ? tsplBanderinHijaExito(campos, bitmap) : tsplBanderinHijaGeneral(campos, bitmap);
 
 /** Etiqueta padre (resumen del lote) — plantilla_etiquetapadre_22072026.prn */
 export const tsplBanderinPadre = (campos: CamposBanderinPadre, bitmap: Uint8Array) => {

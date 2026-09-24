@@ -18,6 +18,7 @@ import vehiculosRoutes from "./vehiculos.routes"
 import reaprovisionamientosRoutes from "./reaprovisionamientos.routes"
 import ordenesCompraRoutes from "./ordenesCompra.routes"
 import codigosEanRoutes from "./codigosEan.routes"
+import localizacionesRoutes from "./localizaciones.routes"
 import pisoRoutes from "./piso.routes"
 import firmantesRoutes from "./firmantes.routes"
 import conductorRoutes from "./conductor.routes"
@@ -43,6 +44,7 @@ export default {
     reaprovisionamientosRoutes,
     ordenesCompraRoutes,
     codigosEanRoutes,
+    localizacionesRoutes,
     pisoRoutes,
     firmantesRoutes,
     conductorRoutes

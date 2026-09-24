@@ -5,9 +5,10 @@ import { PisoService } from "../../services/despacho/piso.service";
 import { MotivosOmisionService } from "../../services/despacho/motivos-omision.service";
 import {
   contarCanastas,
-  documentoListoParaEtiquetas,
+  documentoPuedeEtiquetas,
   pedirYImprimirEtiquetas,
 } from "../../services/despacho/etiquetas-cargue";
+import { enviarTsplRed } from "../../services/despacho/enviar-tspl-red";
 import { AgenteBasculaService } from "../../services/agente-bascula/agente-bascula.service";
 import { PisoBrandComponent } from "./piso-brand.component";
 import {
@@ -29,7 +30,6 @@ import {
 type AlertaDesbalance = { linea: { producto?: string }; av: AvancePedido };
 import { etiquetaPedido } from "../../core/etiqueta-docto";
 import Swal from "sweetalert2";
-import { catchError, throwError } from "rxjs";
 
 @Component({
   selector: "app-portal-lineas",
@@ -68,7 +68,7 @@ export class PortalLineasComponent implements OnInit {
   }
 
   get listoParaEtiquetas() {
-    return documentoListoParaEtiquetas(this.doc);
+    return documentoPuedeEtiquetas(this.doc);
   }
 
   get canastas() {
@@ -178,15 +178,7 @@ export class PortalLineasComponent implements OnInit {
       cargueId: this.cargueId,
       registrar: (payload) => this.piso.registrarEtiquetas(payload),
       enviarTspl: (tsplBase64) =>
-        this.agente.imprimirTspl({ tsplBase64 }).pipe(
-          catchError((err) => {
-            const offline =
-              err?.status === 0 ||
-              /Failed to fetch|Http failure|ERR_CONNECTION/i.test(String(err?.message || ""));
-            if (!offline) return throwError(() => err);
-            return this.piso.imprimirTspl({ tsplBase64 });
-          })
-        ),
+        enviarTsplRed(tsplBase64, { piso: this.piso, agente: this.agente }),
     });
   }
 

@@ -50,6 +50,7 @@ app.use('/api/v1', IndexRoutes.vehiculosRoutes);
 app.use('/api/v1', IndexRoutes.reaprovisionamientosRoutes);
 app.use('/api/v1', IndexRoutes.ordenesCompraRoutes);
 app.use('/api/v1', IndexRoutes.codigosEanRoutes);
+app.use('/api/v1', IndexRoutes.localizacionesRoutes);
 app.use('/api/v1', IndexRoutes.pisoRoutes);
 app.use('/api/v1', IndexRoutes.firmantesRoutes);
 app.use('/api/v1', IndexRoutes.conductorRoutes);

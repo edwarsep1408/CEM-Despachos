@@ -10,6 +10,11 @@ import { TarasEmpaquesService } from "../../services/despacho/taras-empaques.ser
 import { BasculasService } from "../../services/basculas/basculas.service";
 import { AgenteBasculaService, EstadoBascula } from "../../services/agente-bascula/agente-bascula.service";
 import { SocketService } from "../../services/socket/socket.service";
+import {
+  contarCanastasEnDetalle,
+  imprimirEtiquetasDePesaje,
+} from "../../services/despacho/etiquetas-cargue";
+import { enviarTsplRed } from "../../services/despacho/enviar-tspl-red";
 import { PisoBrandComponent } from "./piso-brand.component";
 import { atajoBloqueado, avancePedido, confirmarDesbalance, confirmarRepesar, documentoCerrado, formatearTemperatura, leerMuellePiso, lineaOmitida, mensajeApi, mensajePesoInvalido, nombreMuelle, pedidoEnDe } from "./piso-ui";
 
@@ -539,6 +544,7 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
       return;
     }
     this.guardando = true;
+    const canastasPesaje = contarCanastasEnDetalle(this.taraDetalle);
     this.piso
       .registrarPesaje({
         cargueId: this.cargueId,
@@ -553,12 +559,21 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
         fechaVencimiento: this.fechaVencimiento,
       })
       .subscribe({
-        next: (res) => {
+        next: async (res) => {
           this.guardando = false;
           this.linea = res?.body?.linea || this.linea;
           this.doc = res?.body?.documento || this.doc;
           this.resetTaras();
           this.pesoManual = null;
+          if (canastasPesaje > 0 && this.doc) {
+            await imprimirEtiquetasDePesaje(this.doc, canastasPesaje, {
+              cargueId: this.cargueId,
+              registrar: (payload) => this.piso.registrarEtiquetas(payload),
+              enviarTspl: (tsplBase64) =>
+                enviarTsplRed(tsplBase64, { piso: this.piso, agente: this.agente }),
+              linea: this.linea,
+            });
+          }
         },
         error: (err) => {
           this.guardando = false;
