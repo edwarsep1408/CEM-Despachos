@@ -69,4 +69,9 @@ export class PisoService {
   }): Observable<any> {
     return this.http.put(`${this.url}/put-piso-etiquetas`, payload);
   }
+
+  /** Envía bytes TSPL a la TSC MH241T de red (vía API → IP:9100). */
+  imprimirTspl(payload: { tsplBase64: string; ip?: string; puerto?: number }): Observable<any> {
+    return this.http.post(`${this.url}/post-piso-imprimir-tspl`, payload);
+  }
 }

@@ -88,6 +88,17 @@ const hallarItem = async ({ ean, codigoComprador, gln = "" }) => {
 const enriquecerLineas = async (lineasHse = [], { glnEntrega = "" } = {}) => {
   const avisos = [];
   const lineas = [];
+  const cacheGln = new Map();
+
+  const tiendaDe = async (gln) => {
+    const clave = String(gln || "").trim();
+    if (!clave) return {};
+    if (cacheGln.has(clave)) return cacheGln.get(clave);
+    const tienda = (await resolverTiendaPorGln(clave)) || {};
+    cacheGln.set(clave, tienda);
+    return tienda;
+  };
+
   for (const raw of lineasHse) {
     const ean = String(raw.ean || "").trim();
     const codigoComprador = String(raw.codigoComprador || "").trim();
@@ -107,8 +118,23 @@ const enriquecerLineas = async (lineasHse = [], { glnEntrega = "" } = {}) => {
     }
     const undInv = item?.undInventario || "";
     const undPedidoEtiqueta = etiquetaUnidadPedido(unidadPedido);
-    // Cantidad EDI: KGM → kilos; NAR/UND → unidades (el peso en piso se confirma si el ítem CEM es KG).
     const esPedidoKg = undPedidoEtiqueta === "KG";
+
+    const hijos = [];
+    for (const h of raw.hijos || []) {
+      const gln = String(h.gln || "").trim();
+      if (!gln) continue;
+      const tienda = await tiendaDe(gln);
+      hijos.push({
+        gln,
+        cantidad: Number(h.cantidad) || 0,
+        unidad: String(h.unidad || unidadPedido).toUpperCase(),
+        nombreEstablecimiento: tienda.nombreEstablecimiento || "",
+        codigoEstablecimiento: tienda.codigoEstablecimiento || "",
+        razonSocial: tienda.razonSocial || "",
+      });
+    }
+
     lineas.push({
       nroLinea: String(raw.nroLinea || ""),
       ean,
@@ -116,7 +142,11 @@ const enriquecerLineas = async (lineasHse = [], { glnEntrega = "" } = {}) => {
       item: item?.item || "",
       codigoItem: item?.codigoItem || "",
       referencia: item?.referencia || hallado.referenciaMapa || codigoComprador || ean,
-      descripcion: item?.descripcion || hallado.descripcionMapa || "",
+      descripcion:
+        item?.descripcion ||
+        hallado.descripcionMapa ||
+        String(raw.descripcion || "").trim() ||
+        "",
       undInventario: undInv,
       cantidad,
       unidadPedido,
@@ -126,9 +156,29 @@ const enriquecerLineas = async (lineasHse = [], { glnEntrega = "" } = {}) => {
       kilos: esPedidoKg ? cantidad : 0,
       unidades: esPedidoKg ? 0 : cantidad,
       matched,
+      hijos,
     });
   }
-  return { lineas, avisos };
+  return { lineas, avisos, cacheGln };
+};
+
+const puntosVentaDe = async (glnsHijos = [], cacheGln = null) => {
+  const puntos = [];
+  const vistos = new Set();
+  for (const glnRaw of glnsHijos || []) {
+    const gln = String(glnRaw || "").trim();
+    if (!gln || vistos.has(gln)) continue;
+    vistos.add(gln);
+    let tienda = cacheGln?.get?.(gln);
+    if (!tienda) tienda = (await resolverTiendaPorGln(gln)) || {};
+    puntos.push({
+      gln,
+      nombreEstablecimiento: tienda.nombreEstablecimiento || "",
+      codigoEstablecimiento: tienda.codigoEstablecimiento || "",
+      razonSocial: tienda.razonSocial || "",
+    });
+  }
+  return puntos;
 };
 
 export const snapshotOc = (doc) => {
@@ -214,6 +264,7 @@ export const snapshotOc = (doc) => {
 const resumen = (doc) => {
   const t = totalesDe(doc.lineas);
   const unds = [...new Set((doc.lineas || []).map((l) => l.unidadPedidoEtiqueta || etiquetaUnidadPedido(l.unidadPedido)).filter(Boolean))];
+  const totalPdv = Array.isArray(doc.puntosVenta) ? doc.puntosVenta.length : 0;
   return {
     ...doc,
     peso: doc.peso ?? t.peso,
@@ -222,6 +273,8 @@ const resumen = (doc) => {
     totalLineas: (doc.lineas || []).length,
     lineasSinMatch: (doc.lineas || []).filter((l) => !l.matched).length,
     unidadesPedido: unds.join(", "),
+    totalPuntosVenta: totalPdv,
+    estructura: doc.estructura || (doc.tieneHijos || totalPdv ? "madre-hijos" : "simple"),
   };
 };
 
@@ -314,9 +367,19 @@ ocCtr.importarHse = async (req, res) => {
 
     const glnEntrega = parsed.glnEntrega || parsed.glnComprador || "";
     const tienda = (await resolverTiendaPorGln(glnEntrega)) || {};
-    const { lineas, avisos } = await enriquecerLineas(parsed.lineas, { glnEntrega });
+    const { lineas, avisos, cacheGln } = await enriquecerLineas(parsed.lineas, { glnEntrega });
+    const puntosVenta = await puntosVentaDe(parsed.glnsHijos || [], cacheGln);
+    const tieneHijos = Boolean(parsed.tieneHijos || puntosVenta.length);
     if (!tienda.nombreEstablecimiento) {
-      avisos.push(`Sin nombre de tienda para GLN ${glnEntrega || "—"}. Revise códigos EAN (localización = GLN).`);
+      avisos.push(
+        tieneHijos
+          ? `Sin nombre de CEDI (madre) para GLN ${glnEntrega || "—"}. Revise códigos EAN.`
+          : `Sin nombre de tienda para GLN ${glnEntrega || "—"}. Revise códigos EAN (localización = GLN).`
+      );
+    }
+    if (tieneHijos && puntosVenta.some((p) => !p.nombreEstablecimiento)) {
+      const sinNombre = puntosVenta.filter((p) => !p.nombreEstablecimiento).length;
+      avisos.push(`${sinNombre} PDV hijo(s) sin nombre en catálogo EAN.`);
     }
     const totales = totalesDe(lineas);
     const payload = {
@@ -331,8 +394,12 @@ ocCtr.importarHse = async (req, res) => {
       glnProveedor: parsed.glnProveedor,
       glnComprador: parsed.glnComprador,
       glnEntrega: parsed.glnEntrega,
+      glnCedi: parsed.glnCedi || parsed.glnEntrega || "",
       glnFacturar: parsed.glnFacturar,
       glnGrupo: parsed.glnGrupo,
+      estructura: parsed.estructura || (tieneHijos ? "madre-hijos" : "simple"),
+      tieneHijos,
+      puntosVenta,
       nombreEstablecimiento: tienda.nombreEstablecimiento || "",
       codigoEstablecimiento: tienda.codigoEstablecimiento || "",
       razonSocial: tienda.razonSocial || "",
@@ -353,6 +420,7 @@ ocCtr.importarHse = async (req, res) => {
       existe.set(payload);
       existe.markModified("lineas");
       existe.markModified("avisos");
+      existe.markModified("puntosVenta");
       await existe.save();
       return ok(res, resumen(existe.toObject()));
     }

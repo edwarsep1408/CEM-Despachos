@@ -74,41 +74,59 @@ export class OrdenesDeCompraComponent implements OnInit {
 
   onArchivo(ev: Event) {
     const input = ev.target as HTMLInputElement;
-    const archivo = input.files?.[0];
+    const archivos = Array.from(input.files || []);
     input.value = "";
-    if (!archivo) return;
+    if (!archivos.length) return;
     if (!this.bodegaOrigen) {
       this.toast("info", "Seleccione la bodega de origen antes de cargar el .hse");
       return;
     }
     const origen = this.bodegas.find((b) => b.codigo === this.bodegaOrigen);
     this.importando = true;
-    this.oc
-      .importarHse({
-        archivo,
-        bodegaOrigen: this.bodegaOrigen,
-        bodegaOrigenNombre: origen?.nombre,
-      })
-      .subscribe({
-        next: (res) => {
-          this.importando = false;
-          const body = res.body || {};
-          const sinMatch = Number(body.lineasSinMatch || 0);
-          this.toast(
-            sinMatch ? "info" : "success",
-            sinMatch
-              ? `OC ${body.nroPedido} cargada con ${sinMatch} línea(s) sin ítem en catálogo`
-              : `OC ${body.nroPedido} cargada`
-          );
-          this.filtros.estado = "aprobado";
-          this.cargar();
-          this.ver(body);
-        },
-        error: (err) => {
-          this.importando = false;
-          this.toast("error", err?.error?.body?.message || "No se pudo importar el .hse");
-        },
-      });
+    void this.importarLote(archivos, origen?.nombre || "");
+  }
+
+  private async importarLote(archivos: File[], bodegaOrigenNombre: string) {
+    let ok = 0;
+    let conAvisos = 0;
+    let ultimaOk: any = null;
+    const errores: string[] = [];
+    for (const archivo of archivos) {
+      try {
+        const res: any = await firstValueFrom(
+          this.oc.importarHse({
+            archivo,
+            bodegaOrigen: this.bodegaOrigen,
+            bodegaOrigenNombre,
+          })
+        );
+        ok += 1;
+        ultimaOk = res?.body || null;
+        if (Number(res?.body?.lineasSinMatch || 0) > 0) conAvisos += 1;
+      } catch (err: any) {
+        errores.push(
+          `${archivo.name}: ${err?.error?.body?.message || "No se pudo importar"}`
+        );
+      }
+    }
+    this.importando = false;
+    this.filtros.estado = "aprobado";
+    this.cargar();
+    if (ultimaOk && archivos.length === 1) this.ver(ultimaOk);
+    if (ok && !errores.length) {
+      this.toast(
+        conAvisos ? "info" : "success",
+        conAvisos
+          ? `${ok} orden(es) cargada(s); algunas tienen líneas sin ítem en catálogo`
+          : `${ok} orden(es) de compra cargada(s)`
+      );
+      return;
+    }
+    if (ok && errores.length) {
+      this.toast("info", `${ok} ok, ${errores.length} con error. Ej: ${errores[0]}`);
+      return;
+    }
+    this.toast("error", errores[0] || "No se pudo importar el .hse");
   }
 
   ver(row: any) {

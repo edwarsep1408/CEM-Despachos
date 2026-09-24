@@ -1,5 +1,17 @@
 import { Schema, model } from "mongoose";
 
+const LineaOcHijoSchema = new Schema(
+  {
+    gln: { type: String, default: "", index: true },
+    cantidad: { type: Number, default: 0 },
+    unidad: { type: String, default: "NAR" },
+    nombreEstablecimiento: { type: String, default: "" },
+    codigoEstablecimiento: { type: String, default: "" },
+    razonSocial: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
 const LineaOcSchema = new Schema(
   {
     nroLinea: { type: String, default: "" },
@@ -18,8 +30,20 @@ const LineaOcSchema = new Schema(
     kilos: { type: Number, default: 0 },
     unidades: { type: Number, default: 0 },
     matched: { type: Boolean, default: false },
+    /** Reparto por PDV (órdenes 0020… / LOC+QTYB). */
+    hijos: { type: [LineaOcHijoSchema], default: [] },
   },
   { _id: true }
+);
+
+const PuntoVentaOcSchema = new Schema(
+  {
+    gln: { type: String, default: "", index: true },
+    nombreEstablecimiento: { type: String, default: "" },
+    codigoEstablecimiento: { type: String, default: "" },
+    razonSocial: { type: String, default: "" },
+  },
+  { _id: false }
 );
 
 const OrdenCompraSchema = new Schema({
@@ -35,8 +59,14 @@ const OrdenCompraSchema = new Schema({
   glnProveedor: { type: String, default: "" },
   glnComprador: { type: String, default: "" },
   glnEntrega: { type: String, default: "" },
+  /** CEDI / bodega cadena (madre). Igual a glnEntrega en OC madre-hijos. */
+  glnCedi: { type: String, default: "" },
   glnFacturar: { type: String, default: "" },
   glnGrupo: { type: String, default: "" },
+  /** simple | madre-hijos (prefijo 0020 / YB1 con LOC). */
+  estructura: { type: String, default: "simple", index: true },
+  tieneHijos: { type: Boolean, default: false, index: true },
+  puntosVenta: { type: [PuntoVentaOcSchema], default: [] },
   nombreEstablecimiento: { type: String, default: "", index: true },
   codigoEstablecimiento: { type: String, default: "" },
   razonSocial: { type: String, default: "" },

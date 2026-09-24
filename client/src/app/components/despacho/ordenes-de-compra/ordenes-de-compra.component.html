@@ -3,7 +3,7 @@
     <i class="bx bx-file page-banner-icon"></i>
     <div>
       <h1>Órdenes de compra</h1>
-      <p>Carga de archivos EDI (.hse) de cadenas. Quedan listas para agregarse a un cargue.</p>
+      <p>Carga de archivos EDI (.hse) de cadenas — uno o varios a la vez. Quedan listas para agregarse a un cargue.</p>
     </div>
   </div>
 </div>
@@ -18,7 +18,14 @@
     </label>
     <label class="cargues-link mb-0" [class.disabled]="importando">
       {{ importando ? "Importando…" : "Cargar .hse" }}
-      <input type="file" accept=".hse,.txt,text/plain" hidden (change)="onArchivo($event)" [disabled]="importando" />
+      <input
+        type="file"
+        accept=".hse,.txt,text/plain"
+        multiple
+        hidden
+        (change)="onArchivo($event)"
+        [disabled]="importando"
+      />
     </label>
   </div>
 
@@ -78,6 +85,7 @@
           <th>NOMBRE ESTABLECIMIENTO</th>
           <th>RAZÓN SOCIAL</th>
           <th>GLN / LOCALIZACIÓN</th>
+          <th>ESTRUCTURA</th>
           <th>UND PEDIDO</th>
           <th>ESTADO</th>
           <th>BODEGA</th>
@@ -107,6 +115,12 @@
           <td>{{ row.nombreEstablecimiento || "—" }}</td>
           <td>{{ row.razonSocial || "—" }}</td>
           <td>{{ row.glnEntrega || "—" }}</td>
+          <td>
+            <span *ngIf="row.tieneHijos || row.estructura === 'madre-hijos'; else simpleOc">
+              Madre + {{ row.totalPuntosVenta || row.puntosVenta?.length || 0 }} PDV
+            </span>
+            <ng-template #simpleOc>Simple</ng-template>
+          </td>
           <td>{{ row.unidadesPedido || "—" }}</td>
           <td>{{ row.estado }}</td>
           <td>{{ row.bodegaOrigen }}</td>
@@ -114,7 +128,7 @@
           <td>{{ row.valor | number : "1.0-0" }}</td>
         </tr>
         <tr *ngIf="!filas.length">
-          <td colspan="15" class="text-muted py-3">No hay órdenes con esos filtros. Cargue un archivo .hse.</td>
+          <td colspan="16" class="text-muted py-3">No hay órdenes con esos filtros. Cargue un archivo .hse.</td>
         </tr>
       </tbody>
     </table>
@@ -127,10 +141,13 @@
       <div>
         <h5 class="mb-1">{{ detalle.idEnc }} · {{ detalle.archivoNombre }}</h5>
         <p class="small text-muted mb-0">
-          <strong>{{ detalle.nombreEstablecimiento || "Tienda sin mapear" }}</strong>
+          <strong>{{ detalle.nombreEstablecimiento || (detalle.tieneHijos ? "CEDI sin mapear" : "Tienda sin mapear") }}</strong>
           <span *ngIf="detalle.razonSocial"> · {{ detalle.razonSocial }}</span>
           · GLN {{ detalle.glnEntrega || "—" }}
           · Bodega {{ detalle.bodegaOrigen }}
+          <span *ngIf="detalle.tieneHijos || detalle.estructura === 'madre-hijos'">
+            · Madre + {{ detalle.totalPuntosVenta || detalle.puntosVenta?.length || 0 }} PDV
+          </span>
         </p>
       </div>
       <div class="d-flex align-items-center gap-2">
@@ -140,6 +157,14 @@
     </div>
     <div class="p-3" *ngIf="detalle.avisos?.length">
       <p class="small text-warning mb-1" *ngFor="let a of detalle.avisos">{{ a }}</p>
+    </div>
+    <div class="p-3 border-bottom" *ngIf="detalle.puntosVenta?.length">
+      <p class="small fw-semibold mb-2">Puntos de venta (hijos)</p>
+      <div class="small text-muted d-flex flex-wrap gap-2">
+        <span *ngFor="let pdv of detalle.puntosVenta">
+          {{ pdv.nombreEstablecimiento || "PDV sin mapear" }} ({{ pdv.gln }})
+        </span>
+      </div>
     </div>
     <div class="cargue-panel-lista">
       <table class="table table-sm mb-0">
@@ -155,26 +180,39 @@
             <th>UND CEM</th>
             <th>PRECIO</th>
             <th>MATCH</th>
+            <th>PDV</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let linea of detalle.lineas">
-            <td>{{ linea.nroLinea }}</td>
-            <td>{{ linea.ean || "—" }}</td>
-            <td>{{ linea.codigoComprador || "—" }}</td>
-            <td>{{ linea.referencia || "—" }}</td>
-            <td>{{ linea.descripcion || "—" }}</td>
-            <td>{{ linea.cantidad | number : "1.0-3" }}</td>
-            <td>
-              {{ linea.unidadPedidoEtiqueta || linea.unidadPedido || "—" }}
-              <span class="text-muted" *ngIf="linea.unidadPedido && linea.unidadPedidoEtiqueta && linea.unidadPedido !== linea.unidadPedidoEtiqueta">
-                ({{ linea.unidadPedido }})
-              </span>
-            </td>
-            <td>{{ linea.undInventario || "—" }}</td>
-            <td>{{ linea.precio | number : "1.0-0" }}</td>
-            <td>{{ linea.matched ? "Sí" : "No" }}</td>
-          </tr>
+          <ng-container *ngFor="let linea of detalle.lineas">
+            <tr>
+              <td>{{ linea.nroLinea }}</td>
+              <td>{{ linea.ean || "—" }}</td>
+              <td>{{ linea.codigoComprador || "—" }}</td>
+              <td>{{ linea.referencia || "—" }}</td>
+              <td>{{ linea.descripcion || "—" }}</td>
+              <td>{{ linea.cantidad | number : "1.0-3" }}</td>
+              <td>
+                {{ linea.unidadPedidoEtiqueta || linea.unidadPedido || "—" }}
+                <span class="text-muted" *ngIf="linea.unidadPedido && linea.unidadPedidoEtiqueta && linea.unidadPedido !== linea.unidadPedidoEtiqueta">
+                  ({{ linea.unidadPedido }})
+                </span>
+              </td>
+              <td>{{ linea.undInventario || "—" }}</td>
+              <td>{{ linea.precio | number : "1.0-0" }}</td>
+              <td>{{ linea.matched ? "Sí" : "No" }}</td>
+              <td>{{ linea.hijos?.length || 0 }}</td>
+            </tr>
+            <tr *ngFor="let h of linea.hijos" class="table-light">
+              <td></td>
+              <td colspan="4" class="small text-muted ps-4">
+                → {{ h.nombreEstablecimiento || "PDV sin mapear" }} · {{ h.gln }}
+              </td>
+              <td class="small">{{ h.cantidad | number : "1.0-3" }}</td>
+              <td class="small">{{ h.unidad || "—" }}</td>
+              <td colspan="4"></td>
+            </tr>
+          </ng-container>
         </tbody>
       </table>
     </div>

@@ -2,7 +2,7 @@ import { firstValueFrom, Observable } from "rxjs";
 import Swal from "sweetalert2";
 import { abrirVentanaImpresion, llenarImpresion } from "./hoja-impresion";
 import { qrSvg } from "./qr-svg";
-import { cargarBitmapPollocoa, descargarPrn, tsplBanderinHija } from "./etiquetas-tspl";
+import { cargarBitmapHija, cargarBitmapPadre, descargarPrn, tsplBanderinHija, tsplBanderinPadre } from "./etiquetas-tspl";
 
 export type EtiquetaCanasta = {
   cliente: string;
@@ -228,12 +228,15 @@ export const imprimirEtiquetasCanasta = (
   doc: any,
   totalCanastas: number,
   ventana: Window | null = null,
-  registradas: Array<{ codigo?: string; canastaNum?: number }> = []
+  registradas: Array<{ codigo?: string; canastaNum?: number }> = [],
+  opts: {
+    enviarTspl?: (tsplBase64: string) => Observable<any>;
+  } = {}
 ) => {
   const etiquetas = armarEtiquetasCanasta(doc, totalCanastas, registradas);
   if (!etiquetas.length) return false;
   const html = etiquetas.map(htmlEtiqueta).join("");
-  void descargarTsplBanderines(etiquetas);
+  void enviarTsplBanderines(etiquetas, opts.enviarTspl);
   return llenarImpresion(
     ventana,
     `Etiquetas ${etiquetas[0].documentoRef}`,
@@ -242,23 +245,57 @@ export const imprimirEtiquetasCanasta = (
   );
 };
 
-const descargarTsplBanderines = async (etiquetas: EtiquetaCanasta[]) => {
+const bytesToBase64 = (bytes: Uint8Array) => {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+};
+
+const enviarTsplBanderines = async (
+  etiquetas: EtiquetaCanasta[],
+  enviarTspl?: (tsplBase64: string) => Observable<any>
+) => {
   try {
-    const bitmap = await cargarBitmapPollocoa();
-    const jobs = etiquetas.map((e) =>
-      tsplBanderinHija(
+    const [bitmapHija, bitmapPadre] = await Promise.all([
+      cargarBitmapHija(),
+      cargarBitmapPadre(),
+    ]);
+    const primera = etiquetas[0];
+    const ultima = etiquetas[etiquetas.length - 1];
+    const fecha = new Date().toISOString().slice(0, 10);
+    const cliente = primera.cliente || "SIN CLIENTE";
+
+    const jobs: Uint8Array[] = [
+      tsplBanderinPadre(
         {
-          productLongName: e.cliente || "SIN CLIENTE",
-          referencia: e.documentoRef,
-          loadName: e.loadName,
-          stateProduct: e.stateProduct,
-          consecutive: e.codigo,
-          enterpriseClientName: e.cliente || "SIN CLIENTE",
-          barcode: e.codigo,
+          productLongName: cliente,
+          enterpriseClientName: cliente,
+          barcodeFather: primera.documentoRef,
+          barcodePrintStart: primera.codigo,
+          barcodePrintEnd: ultima.codigo,
+          quantity: etiquetas.length,
+          date: fecha,
         },
-        bitmap
-      )
-    );
+        bitmapPadre
+      ),
+      ...etiquetas.map((e) =>
+        tsplBanderinHija(
+          {
+            productLongName: e.cliente || "SIN CLIENTE",
+            referencia: e.documentoRef,
+            loadName: e.loadName,
+            stateProduct: e.stateProduct,
+            consecutive: e.codigo,
+            enterpriseClientName: e.cliente || "SIN CLIENTE",
+            barcode: e.codigo,
+          },
+          bitmapHija
+        )
+      ),
+    ];
     const total = jobs.reduce((n, j) => n + j.length, 0);
     const out = new Uint8Array(total);
     let o = 0;
@@ -266,19 +303,38 @@ const descargarTsplBanderines = async (etiquetas: EtiquetaCanasta[]) => {
       out.set(j, o);
       o += j.length;
     }
-    descargarPrn(`${etiquetas[0].documentoRef}-banderin.prn`, out);
-  } catch (err) {
-    console.error("No se pudo armar el TSPL del banderín:", err);
+    if (enviarTspl) {
+      const res: any = await firstValueFrom(enviarTspl(bytesToBase64(out)));
+      const msg = res?.body?.message || "Enviado a la TSC";
+      await Swal.fire({
+        icon: "success",
+        title: msg,
+        text: `1 padre + ${etiquetas.length} hija(s)`,
+        timer: 2200,
+        showConfirmButton: false,
+      });
+      return;
+    }
+    descargarPrn(`${primera.documentoRef}-banderines.prn`, out);
+  } catch (err: any) {
+    console.error("No se pudo imprimir el TSPL del banderín:", err);
+    await Swal.fire({
+      icon: "error",
+      title: err?.error?.body?.message || err?.message || "No se pudo enviar a la TSC MH241T.",
+    });
   }
 };
 
 export const abrirImpresionEtiquetas = (
   doc: any,
   totalCanastas: number,
-  registradas: Array<{ codigo?: string; canastaNum?: number }> = []
+  registradas: Array<{ codigo?: string; canastaNum?: number }> = [],
+  opts: {
+    enviarTspl?: (tsplBase64: string) => Observable<any>;
+  } = {}
 ) => {
   const ventana = abrirVentanaImpresion("Generando etiquetas…");
-  return imprimirEtiquetasCanasta(doc, totalCanastas, ventana, registradas);
+  return imprimirEtiquetasCanasta(doc, totalCanastas, ventana, registradas, opts);
 };
 
 export const pedirYImprimirEtiquetas = async (
@@ -286,6 +342,7 @@ export const pedirYImprimirEtiquetas = async (
   opts: {
     cargueId: string;
     registrar: (payload: { cargueId: string; docId: string; totalCanastas: number }) => Observable<any>;
+    enviarTspl?: (tsplBase64: string) => Observable<any>;
   }
 ) => {
   if (!doc || !documentoListoParaEtiquetas(doc)) {
@@ -299,8 +356,8 @@ export const pedirYImprimirEtiquetas = async (
   const r = await Swal.fire({
     title: "Etiquetas de canasta",
     text: canastas
-      ? `Se imprimirá 1 banderín por canasta (${canastas}) para la TSC MH241T (304 × 60 mm).`
-      : "No hay canastas en los pesajes. Indique cuántas etiquetas imprimir.",
+      ? `Se imprimirá 1 etiqueta padre + ${canastas} hija(s) en la TSC MH241T.`
+      : "No hay canastas en los pesajes. Indique cuántas etiquetas hijas imprimir.",
     input: "number",
     inputValue: canastas || 1,
     inputAttributes: { min: "1", step: "1" },
@@ -326,7 +383,9 @@ export const pedirYImprimirEtiquetas = async (
     if (res?.body?.documento) {
       Object.assign(doc, res.body.documento);
     }
-    return abrirImpresionEtiquetas(doc, total, registradas);
+    return abrirImpresionEtiquetas(doc, total, registradas, {
+      enviarTspl: opts.enviarTspl,
+    });
   } catch (err: any) {
     await Swal.fire({
       icon: "error",

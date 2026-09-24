@@ -11,6 +11,21 @@ const numEdifact = (valor) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+/**
+ * Extrae cantidad embebida en campos de ancho fijo tipo
+ * `000000000112.000` / `000000000112,000`.
+ */
+const cantidadFija = (texto) => {
+  const t = String(texto || "");
+  const m =
+    t.match(/(\d{6,})[.,](\d{1,3})\b/) ||
+    t.match(/\b(\d+)[.,](\d{1,3})\b/) ||
+    t.match(/\b(\d{1,12})\b/);
+  if (!m) return 0;
+  if (m[2] != null) return numEdifact(`${m[1]}.${m[2]}`);
+  return numEdifact(m[1]);
+};
+
 const partesLinea = (linea) => {
   const raw = String(linea || "").replace(/\r$/, "");
   if (!raw.trim()) return null;
@@ -28,7 +43,32 @@ const rolNad = (resto) => {
 
 /**
  * Parser de ORDERS estilo EDIFACT / .hse (cadenas retail Colombia).
- * Formato de ancho/espacios fijo observado en archivos .hse.
+ *
+ * Estructura típica (una línea = un segmento, CR/LF):
+ *   UNB  <GLN proveedor>
+ *   UNH  1
+ *   BGM  220 | YB1          → tipo documento
+ *   BGMA <nro orden>        → número de pedido cadena
+ *   DTM  137 <fecha doc>    → fecha documento (YYYYMMDD…)
+ *   DTM  63  <fecha hasta>  → entrega hasta
+ *   DTM  64  <fecha desde>  → entrega desde
+ *   FTX  …                  → textos legales / observaciones
+ *   NAD  BY|SN|SG|SU|DP|IV|ITO <GLN>
+ *   PAT / PATA … D <días>   → condición de pago
+ *   LIN  <nro> <EAN|código> EN
+ *   PIA  1 <código comprador> SA
+ *   IMD  F <descripción>
+ *   QTYA21 <cantidad> NAR|KGM   → cantidad pedida (madre / total línea)
+ *   LOC  R7 <GLN tienda>        → hijo PDV (típico órdenes 0020… / YB1)
+ *   QTYB11 <cantidad> …         → cantidad del hijo (reparto por tienda)
+ *   PRI  AAB|AAA <precio>
+ *   PAC  <empaques> <UM>
+ *   CNT  2 <n líneas>
+ *
+ * Órdenes que empiezan por 0020 (BGM YB1): madre = CEDI (NAD DP/SN) + hijos = LOC R7.
+ * Resto (BGM 220): pedido simple a un solo destino.
+ *
+ * Codificación habitual: latin1 / Windows-1252.
  */
 export const parsearHseOrdenes = (contenido, { archivoNombre = "" } = {}) => {
   const lineas = String(contenido || "").split(/\r?\n/);
@@ -50,6 +90,8 @@ export const parsearHseOrdenes = (contenido, { archivoNombre = "" } = {}) => {
   const flushLinea = () => {
     if (!lineaActual) return;
     if (lineaActual.ean || lineaActual.codigoComprador) {
+      delete lineaActual._locPendiente;
+      if (!Array.isArray(lineaActual.hijos)) lineaActual.hijos = [];
       partes.lineas.push(lineaActual);
     }
     lineaActual = null;
@@ -68,6 +110,9 @@ export const parsearHseOrdenes = (contenido, { archivoNombre = "" } = {}) => {
       const cuerpo = resto.trim();
       if (/^\d+$/.test(cuerpo)) {
         partes.tipoDoc = cuerpo;
+      } else if (/^[A-Z]{2,3}\d*$/i.test(cuerpo) && cuerpo.length <= 6) {
+        // p.ej. YB1 (variante Éxito) — no es el número de orden
+        partes.tipoDoc = cuerpo.toUpperCase();
       } else if (cuerpo.startsWith("A") || cuerpo.length > 3) {
         partes.nroPedido = txt(cuerpo.replace(/^A/i, ""));
       }
@@ -100,15 +145,26 @@ export const parsearHseOrdenes = (contenido, { archivoNombre = "" } = {}) => {
       flushLinea();
       const nro = resto.slice(0, 10).trim();
       const eanMatch = resto.match(/(\d{8,14})/);
+      const codigoCorto = resto.slice(10, 45).trim().split(/\s+/)[0] || "";
       lineaActual = {
         nroLinea: nro || String(partes.lineas.length + 1),
-        ean: eanMatch ? eanMatch[1] : resto.slice(10, 45).trim(),
+        ean: eanMatch ? eanMatch[1] : codigoCorto,
         codigoComprador: "",
+        descripcion: "",
         cantidad: 0,
         unidad: "NAR",
         precio: 0,
         empaque: 0,
+        unidadEmpaque: "",
+        hijos: [],
+        _locPendiente: "",
       };
+      continue;
+    }
+    if (tag === "LOC" && lineaActual) {
+      // `LOCR7   7701001004204                 9`
+      const glnMatch = resto.match(/(\d{8,14})/);
+      lineaActual._locPendiente = glnMatch ? glnMatch[1] : "";
       continue;
     }
     if (tag === "PIA" && lineaActual) {
@@ -117,27 +173,54 @@ export const parsearHseOrdenes = (contenido, { archivoNombre = "" } = {}) => {
       if (codigo) lineaActual.codigoComprador = codigo;
       continue;
     }
+    if (tag === "IMD" && lineaActual) {
+      // `IMD F                                 DESCRIPCION...`
+      const desc = txt(resto.replace(/^\s*[A-Z]\s+/i, ""));
+      if (desc) lineaActual.descripcion = desc;
+      continue;
+    }
     if (tag === "QTY" && lineaActual) {
+      const calificador = txt(resto.slice(0, 3)).toUpperCase();
+      // B11 = cantidad del hijo (LOC). No pisa el total A21 de la línea madre.
+      if (calificador.startsWith("B")) {
+        const cuerpo = resto.replace(/^B\d+\s*/i, "");
+        const cantidad = cantidadFija(cuerpo);
+        const und = (cuerpo.match(/\b([A-Z]{2,3})\s*$/i) || [])[1] || lineaActual.unidad || "NAR";
+        const gln = lineaActual._locPendiente || "";
+        if (gln && cantidad > 0) {
+          lineaActual.hijos.push({
+            gln,
+            cantidad,
+            unidad: und.toUpperCase(),
+          });
+        }
+        lineaActual._locPendiente = "";
+        continue;
+      }
+      if (calificador && calificador !== "A21" && !/^A\d+$/.test(calificador)) {
+        continue;
+      }
       const cuerpo = resto.replace(/^A\d+\s*/i, "");
-      const m = cuerpo.match(/([\d]+[.,][\d]+|[\d]+)/);
+      const cantidad = cantidadFija(cuerpo);
       const und = (cuerpo.match(/\b([A-Z]{2,3})\s*$/i) || [])[1] || "NAR";
-      if (m) lineaActual.cantidad = numEdifact(m[1]);
+      if (cantidad > 0) lineaActual.cantidad = cantidad;
       lineaActual.unidad = und.toUpperCase();
       continue;
     }
     if (tag === "PRI" && lineaActual) {
       const tipo = resto.slice(0, 4).trim().toUpperCase();
       const cuerpo = resto.slice(4);
-      const m = cuerpo.match(/([\d]+[.,][\d]+|[\d]+)/);
-      const precio = m ? numEdifact(m[1]) : 0;
+      const precio = cantidadFija(cuerpo);
       if (tipo === "AAB" || tipo === "AAA" || !lineaActual.precio) {
         lineaActual.precio = precio;
       }
       continue;
     }
     if (tag === "PAC" && lineaActual) {
-      const m = resto.match(/([\d]+[.,][\d]+|[\d]+)/);
-      if (m) lineaActual.empaque = numEdifact(m[1]);
+      const cantidad = cantidadFija(resto);
+      const und = (resto.match(/\b([A-Z]{2,3})\b/) || [])[1] || "";
+      if (cantidad > 0) lineaActual.empaque = cantidad;
+      if (und) lineaActual.unidadEmpaque = und.toUpperCase();
       continue;
     }
   }
@@ -155,6 +238,19 @@ export const parsearHseOrdenes = (contenido, { archivoNombre = "" } = {}) => {
     throw new Error("El archivo .hse no trae líneas de producto (LIN).");
   }
 
+  const glnsHijos = [];
+  const vistos = new Set();
+  for (const lin of partes.lineas) {
+    for (const h of lin.hijos || []) {
+      if (!h.gln || vistos.has(h.gln)) continue;
+      vistos.add(h.gln);
+      glnsHijos.push(h.gln);
+    }
+  }
+  const prefijo0020 = String(partes.nroPedido || "").startsWith("0020");
+  const tieneHijos = glnsHijos.length > 0;
+  const glnCedi = partes.partes.DP || partes.partes.SN || partes.partes.ITO || "";
+
   return {
     nroPedido: partes.nroPedido,
     tipoDoc: partes.tipoDoc || "220",
@@ -165,9 +261,15 @@ export const parsearHseOrdenes = (contenido, { archivoNombre = "" } = {}) => {
     pagoDias: partes.pagoDias,
     glnProveedor: partes.partes.SU || partes.unb || "",
     glnComprador: partes.partes.BY || "",
-    glnEntrega: partes.partes.DP || partes.partes.SN || partes.partes.ITO || "",
+    // Madre (CEDI). En OC simple coincide con el único destino.
+    glnEntrega: glnCedi || partes.partes.BY || "",
+    glnCedi,
     glnFacturar: partes.partes.IV || partes.partes.BY || "",
     glnGrupo: partes.partes.SG || "",
+    // Prefijo 0020 (YB1) = madre/hijos en la práctica; la fuente de verdad es LOC+QTYB.
+    estructura: tieneHijos || prefijo0020 ? "madre-hijos" : "simple",
+    tieneHijos,
+    glnsHijos,
     partes: partes.partes,
     lineas: partes.lineas,
     archivoNombre: archivoNombre || "",

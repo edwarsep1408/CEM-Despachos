@@ -1,4 +1,4 @@
-/** TSPL2 para TSC MH241T — plantilla hija BarTender 304 × 60 mm (SIZE 58.7 mm, 304 mm). */
+/** TSPL2 TSC MH241T — plantillas BarTender 22/07/2026 (304 × 60 mm). */
 
 const ENC = new TextEncoder();
 
@@ -37,15 +37,21 @@ const concat = (partes: Uint8Array[]) => {
   return out;
 };
 
-let bitmapCache: Uint8Array | null = null;
+const cacheBitmap: Record<string, Uint8Array> = {};
 
-export const cargarBitmapPollocoa = async () => {
-  if (bitmapCache) return bitmapCache;
-  const res = await fetch("/assets/pollocoa-banderin.bin");
+const cargarBitmap = async (nombre: "hija" | "padre") => {
+  if (cacheBitmap[nombre]) return cacheBitmap[nombre];
+  const res = await fetch(`/assets/pollocoa-banderin-${nombre}.bin`);
   if (!res.ok) return new Uint8Array();
-  bitmapCache = new Uint8Array(await res.arrayBuffer());
-  return bitmapCache;
+  cacheBitmap[nombre] = new Uint8Array(await res.arrayBuffer());
+  return cacheBitmap[nombre];
 };
+
+/** @deprecated usar cargarBitmapHija */
+export const cargarBitmapPollocoa = () => cargarBitmap("hija");
+
+export const cargarBitmapHija = () => cargarBitmap("hija");
+export const cargarBitmapPadre = () => cargarBitmap("padre");
 
 export type CamposBanderinHija = {
   productLongName: string;
@@ -57,6 +63,17 @@ export type CamposBanderinHija = {
   barcode: string;
 };
 
+export type CamposBanderinPadre = {
+  productLongName: string;
+  enterpriseClientName: string;
+  barcodeFather: string;
+  barcodePrintStart: string;
+  barcodePrintEnd: string;
+  quantity: string | number;
+  date: string;
+};
+
+/** Etiqueta hija (1 por canasta) — plantilla_etiquetahija22072026.prn */
 export const tsplBanderinHija = (campos: CamposBanderinHija, bitmap: Uint8Array) => {
   const partes: Uint8Array[] = [ENC.encode(`${PREAMBULO}\r\n`)];
   if (bitmap.length) {
@@ -80,6 +97,37 @@ export const tsplBanderinHija = (campos: CamposBanderinHija, bitmap: Uint8Array)
     `TEXT 136,959,"0",90,15,16,"${consec}"`,
     `TEXT 436,1079,"0",90,35,36,"${nombre}"`,
     `TEXT 59,959,"0",90,15,16,"${cliente}"`,
+    "PRINT 1,1",
+    "",
+  ].join("\r\n");
+  partes.push(ENC.encode(cmds));
+  return concat(partes);
+};
+
+/** Etiqueta padre (resumen del lote) — plantilla_etiquetapadre_22072026.prn */
+export const tsplBanderinPadre = (campos: CamposBanderinPadre, bitmap: Uint8Array) => {
+  const partes: Uint8Array[] = [ENC.encode(`${PREAMBULO}\r\n`)];
+  if (bitmap.length) {
+    partes.push(ENC.encode("BITMAP 159,2125,15,264,1,"));
+    partes.push(bitmap);
+    partes.push(ENC.encode("\r\n"));
+  }
+  const qr = escTspl(campos.barcodeFather);
+  const nombre = escTspl(campos.productLongName || "SIN CLIENTE");
+  const cliente = escTspl(campos.enterpriseClientName || nombre);
+  const inicio = escTspl(campos.barcodePrintStart);
+  const fin = escTspl(campos.barcodePrintEnd);
+  const cant = escTspl(campos.quantity);
+  const fecha = escTspl(campos.date);
+  const cmds = [
+    `QRCODE 270,959,L,10,A,90,M2,S7,"${qr}"`,
+    "CODEPAGE 1252",
+    `TEXT 280,1279,"0",90,15,16,"Inicio: ${inicio}"`,
+    `TEXT 227,1279,"0",90,15,16,"Fin:  ${fin}"`,
+    `TEXT 174,1279,"0",90,15,16,"Cantidad: ${cant}"`,
+    `TEXT 121,1279,"0",90,15,16,"Fecha: ${fecha}"`,
+    `TEXT 68,1279,"0",90,15,16,"Cliente: ${cliente}"`,
+    `TEXT 416,1039,"0",90,35,36,"${nombre}"`,
     "PRINT 1,1",
     "",
   ].join("\r\n");

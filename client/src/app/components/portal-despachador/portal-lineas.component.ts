@@ -8,6 +8,7 @@ import {
   documentoListoParaEtiquetas,
   pedirYImprimirEtiquetas,
 } from "../../services/despacho/etiquetas-cargue";
+import { AgenteBasculaService } from "../../services/agente-bascula/agente-bascula.service";
 import { PisoBrandComponent } from "./piso-brand.component";
 import {
   atajoBloqueado,
@@ -28,6 +29,7 @@ import {
 type AlertaDesbalance = { linea: { producto?: string }; av: AvancePedido };
 import { etiquetaPedido } from "../../core/etiqueta-docto";
 import Swal from "sweetalert2";
+import { catchError, throwError } from "rxjs";
 
 @Component({
   selector: "app-portal-lineas",
@@ -51,7 +53,8 @@ export class PortalLineasComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private piso: PisoService,
-    private motivos: MotivosOmisionService
+    private motivos: MotivosOmisionService,
+    private agente: AgenteBasculaService
   ) {}
 
   ngOnInit(): void {
@@ -174,6 +177,16 @@ export class PortalLineasComponent implements OnInit {
     await pedirYImprimirEtiquetas(this.doc, {
       cargueId: this.cargueId,
       registrar: (payload) => this.piso.registrarEtiquetas(payload),
+      enviarTspl: (tsplBase64) =>
+        this.agente.imprimirTspl({ tsplBase64 }).pipe(
+          catchError((err) => {
+            const offline =
+              err?.status === 0 ||
+              /Failed to fetch|Http failure|ERR_CONNECTION/i.test(String(err?.message || ""));
+            if (!offline) return throwError(() => err);
+            return this.piso.imprimirTspl({ tsplBase64 });
+          })
+        ),
     });
   }
 

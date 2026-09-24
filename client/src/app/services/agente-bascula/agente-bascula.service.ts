@@ -30,6 +30,14 @@ export class AgenteBasculaService {
     return this.http.post<{ body: EstadoBascula }>(`${this.url}/reconectar`, {});
   }
 
+  /** Envía TSPL a la TSC MH241T vía agente local (misma LAN del muelle). */
+  imprimirTspl(payload: { tsplBase64: string; ip?: string; puerto?: number }) {
+    return this.http.post<{ body: { message?: string; ip?: string; puerto?: number; bytes?: number } }>(
+      `${this.url}/imprimir-tspl`,
+      payload
+    );
+  }
+
   eventos(): Observable<EstadoBascula> {
     return new Observable((subscriber) => {
       const source = new EventSource(`${this.url}/eventos`);

@@ -13,6 +13,7 @@ import {
 } from "../services/piso.servicios";
 import { marcarOrigenDespachado, marcarOrigenDespachando } from "../services/origenDespacho.servicios";
 import { armarEtiquetasCanasta } from "../services/etiquetasCanasta.servicios";
+import { configImpresoraTsc, enviarTspl } from "../services/impresoraTsc.servicios";
 import {
   enriquecerDocumentosVidaUtil,
   fechaVencimientoDe,
@@ -534,6 +535,35 @@ pisoCtr.registrarEtiquetas = async (req, res) => {
   } catch (error) {
     console.error("registrarEtiquetasPiso:", error.message);
     return fail(res, "No se pudieron registrar las etiquetas.", 500);
+  }
+};
+
+/** Envía TSPL crudo a la TSC MH241T de red (IP configurada o override). */
+pisoCtr.imprimirTspl = async (req, res) => {
+  try {
+    const { tsplBase64, ip, puerto } = req.body || {};
+    const b64 = String(tsplBase64 || "").replace(/^data:.*?;base64,/, "").trim();
+    if (!b64) return fail(res, "Falta el contenido TSPL (tsplBase64).", 400);
+    let buffer;
+    try {
+      buffer = Buffer.from(b64, "base64");
+    } catch (_) {
+      return fail(res, "tsplBase64 inválido.", 400);
+    }
+    if (!buffer.length) return fail(res, "El TSPL está vacío.", 400);
+    const cfg = configImpresoraTsc();
+    const destino = {
+      ip: String(ip || "").trim() || cfg.ip,
+      puerto: Number(puerto) || cfg.puerto,
+    };
+    const result = await enviarTspl(buffer, destino);
+    return ok(res, {
+      message: `Enviado a TSC ${result.ip}:${result.puerto}`,
+      ...result,
+    });
+  } catch (error) {
+    console.error("imprimirTsplPiso:", error.message);
+    return fail(res, error.message || "No se pudo imprimir en la TSC.", 502);
   }
 };
 
