@@ -214,10 +214,87 @@ export class OrdenesDeCompraComponent implements OnInit {
     }
   }
 
+  /** Madre+hijos → una hoja por PDV (como Iventas). Simple → una hoja. */
+  private expandirHojasImpresion(oc: any): any[] {
+    const lineas = Array.isArray(oc?.lineas) ? oc.lineas : [];
+    const porGln = new Map<
+      string,
+      {
+        gln: string;
+        codigoEstablecimiento: string;
+        nombreEstablecimiento: string;
+        razonSocial: string;
+        lineas: any[];
+      }
+    >();
+
+    for (const lin of lineas) {
+      for (const h of lin.hijos || []) {
+        const gln = String(h?.gln || "").trim();
+        if (!gln) continue;
+        if (!porGln.has(gln)) {
+          porGln.set(gln, {
+            gln,
+            codigoEstablecimiento: String(h.codigoEstablecimiento || "").trim(),
+            nombreEstablecimiento: String(h.nombreEstablecimiento || "").trim(),
+            razonSocial: String(h.razonSocial || oc.razonSocial || "").trim(),
+            lineas: [],
+          });
+        }
+        const pdv = porGln.get(gln)!;
+        if (!pdv.codigoEstablecimiento && h.codigoEstablecimiento) {
+          pdv.codigoEstablecimiento = String(h.codigoEstablecimiento).trim();
+        }
+        if (!pdv.nombreEstablecimiento && h.nombreEstablecimiento) {
+          pdv.nombreEstablecimiento = String(h.nombreEstablecimiento).trim();
+        }
+        const undRaw = String(h.unidad || lin.unidadPedido || "NAR").toUpperCase();
+        const esKg = undRaw === "KGM" || undRaw === "KG" || undRaw === "KGS";
+        const cant = Number(h.cantidad) || 0;
+        pdv.lineas.push({
+          ...lin,
+          cantidad: cant,
+          unidadPedido: undRaw,
+          unidadPedidoEtiqueta: esKg ? "KG" : lin.unidadPedidoEtiqueta || "UND",
+          kilos: esKg ? cant : Number(lin.kilos) || 0,
+          unidades: esKg ? 0 : cant,
+          hijos: [],
+        });
+      }
+    }
+
+    if (!porGln.size) return [oc];
+
+    const cediNombre =
+      oc.estructura === "madre-hijos" || oc.tieneHijos
+        ? oc.nombreEstablecimiento || oc.codigoEstablecimiento || ""
+        : "";
+    const cediGln = oc.glnCedi || (oc.tieneHijos ? oc.glnEntrega : "") || "";
+
+    return [...porGln.values()].map((pdv) => {
+      const cod = pdv.codigoEstablecimiento;
+      const nom = pdv.nombreEstablecimiento;
+      const est = cod && nom ? `${cod}-${nom}` : nom || cod || "—";
+      return {
+        ...oc,
+        glnEntrega: pdv.gln,
+        codigoEstablecimiento: cod,
+        nombreEstablecimiento: est,
+        razonSocial: pdv.razonSocial || oc.razonSocial || "ALMACENES EXITO S.A.",
+        centroDistribucion: cediNombre || cediGln || "—",
+        lineas: pdv.lineas,
+        puntosVenta: [],
+        tieneHijos: false,
+        estructura: "simple",
+      };
+    });
+  }
+
   private abrirImpresion(detalles: any[]) {
     const logo = `${window.location.origin}/assets/img/LOGOTIPO.svg`;
-    const hojas = detalles
-      .map((oc, i) => this.htmlHojaOc(oc, logo, i + 1, detalles.length))
+    const hojasPlanas = detalles.flatMap((oc) => this.expandirHojasImpresion(oc));
+    const hojas = hojasPlanas
+      .map((oc, i) => this.htmlHojaOc(oc, logo, i + 1, hojasPlanas.length))
       .join("");
     const ventana = window.open("", "_blank", "width=900,height=700");
     if (!ventana) {
@@ -226,7 +303,7 @@ export class OrdenesDeCompraComponent implements OnInit {
     }
     ventana.document.write(`<!doctype html><html><head><title>Órdenes de compra · CEM-Despachos</title>
       <style>
-        @page{size:A4;margin:12mm}
+        @page{size:letter;margin:12mm}
         body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:16px}
         .hoja{page-break-after:always;position:relative;padding-bottom:32px;min-height:240mm}
         .hoja:last-child{page-break-after:auto}
@@ -235,8 +312,8 @@ export class OrdenesDeCompraComponent implements OnInit {
         .sub{margin:0 0 12px;font-size:12px;color:#555}
         .meta{font-size:13px;line-height:1.45;max-width:72%}
         .meta b{display:inline-block;min-width:150px}
-        table{width:100%;border-collapse:collapse;margin-top:14px;font-size:12px}
-        th,td{border:1px solid #1d4f91;padding:5px 6px;text-align:left;vertical-align:top}
+        table{width:100%;border-collapse:collapse;margin-top:14px;font-size:11px}
+        th,td{border:1px solid #1d4f91;padding:4px 5px;text-align:left;vertical-align:top}
         th{background:#8ec3e6;color:#113}
         .num{text-align:right}
         .dash{text-align:center;color:#888}
@@ -252,11 +329,13 @@ export class OrdenesDeCompraComponent implements OnInit {
     const lineas = Array.isArray(oc.lineas) ? oc.lineas : [];
     const filas = lineas
       .map((linea: any) => {
-        const undPed = linea.unidadPedidoEtiqueta || linea.unidadPedido || "UND";
+        const undPed = String(linea.unidadPedidoEtiqueta || linea.unidadPedido || "UND").toUpperCase();
         const cant = Number(linea.cantidad) || 0;
-        const esKg = String(undPed).toUpperCase() === "KG";
+        const esKg = undPed === "KG" || undPed === "KGM" || undPed === "KGS";
         const und = esKg ? "" : this.fmt(cant);
         const kg = esKg ? this.fmt(cant) : linea.kilos ? this.fmt(linea.kilos) : "";
+        const plu = linea.codigoComprador || linea.plu || "";
+        const vlr = Number(linea.precio) || 0;
         return `<tr>
           <td>${this.esc(linea.referencia || linea.codigoItem || linea.ean)}</td>
           <td>${this.esc(linea.descripcion || "")}</td>
@@ -268,42 +347,41 @@ export class OrdenesDeCompraComponent implements OnInit {
           <td></td>
           <td></td>
           <td></td>
-          <td></td>
+          <td class="num">${plu ? this.esc(plu) : ""}</td>
+          <td class="num">${vlr ? this.fmtMoney(vlr) : ""}</td>
         </tr>`;
       })
       .join("");
     const year = new Date().getFullYear();
     const tienda = oc.nombreEstablecimiento || "—";
     const razon = oc.razonSocial || "—";
+    const centro = oc.centroDistribucion || oc.bodegaOrigenNombre || oc.bodegaOrigen || "—";
     return `<section class="hoja">
       <img class="logo" src="${logo}" alt="Pollocoa" />
-      <h1>Orden de compra</h1>
+      <h1>Orden De compra</h1>
       <p class="sub">CEM-Despachos · Pollocoa</p>
       <div class="meta">
         <div><b>NUM ORDEN:</b> ${this.esc(oc.nroPedido || oc.idEnc)}</div>
-        <div><b>ID INTERNO:</b> ${this.esc(oc.idEnc)} · ${this.esc(oc.idOc)}</div>
+        <div><b>ID INTERNO:</b> ${this.esc(oc.idOc || oc.idEnc)}</div>
         <div><b>CLIENTE:</b> ${this.esc(razon)}</div>
         <div><b>ESTABLECIMIENTO:</b> ${this.esc(tienda)}</div>
-        <div><b>LOCALIZACIÓN (GLN):</b> ${this.esc(oc.glnEntrega)}</div>
-        <div><b>CÓDIGO TIENDA:</b> ${this.esc(oc.codigoEstablecimiento || "—")}</div>
+        <div><b>LOCALIZACION:</b> ${this.esc(oc.glnEntrega)}</div>
+        <div><b>CENTRO_DIS:</b> ${this.esc(centro)}</div>
         <div><b>BODEGA ORIGEN:</b> ${this.esc(oc.bodegaOrigen)} ${this.esc(oc.bodegaOrigenNombre || "")}</div>
         <div><b>FECHA:</b> ${this.esc(oc.fecha)}</div>
-        <div><b>FECHA ENT. MIN:</b> ${this.esc(oc.fechaEntregaDesde || "—")}</div>
-        <div><b>FECHA ENT. MAX:</b> ${this.esc(oc.fechaEntregaHasta || "—")}</div>
+        <div><b>FECHA MIN:</b> ${this.esc(oc.fechaEntregaDesde || "—")}</div>
+        <div><b>FECHA MAX:</b> ${this.esc(oc.fechaEntregaHasta || "—")}</div>
         <div><b>OBSERVACIÓN:</b> ${this.esc(oc.observacion || "—")}</div>
       </div>
       <table>
         <thead><tr>
-          <th>CÓDIGO</th><th>REFERENCIA</th><th>UND</th><th>KG</th><th></th>
-          <th>KG BRUTO</th><th>KG NETO</th><th>UNIDADES</th>
-          <th>CANASTAS</th><th>BULTOS</th><th>CAJAS</th>
+          <th>CODIGO</th><th>REFERENCIA</th><th>UND</th><th>KILO</th><th></th>
+          <th>KG_BRUTO</th><th>KG_NETO</th><th>UNIDADES</th>
+          <th>CANASTAS</th><th>CAJAS</th><th>PLU</th><th>VLRPRO</th>
         </tr></thead>
-        <tbody>${filas || `<tr><td colspan="11" class="dash">Sin líneas</td></tr>`}</tbody>
+        <tbody>${filas || `<tr><td colspan="12" class="dash">Sin líneas</td></tr>`}</tbody>
       </table>
-      <div class="footer"><b>Total registros:</b> ${lineas.length}
-        · <b>Valor:</b> ${this.fmtMoney(oc.valor)}
-        · <b>UND pedido:</b> ${this.esc(oc.unidadesPedido || this.undsDe(lineas))}
-      </div>
+      <div class="footer"><b>Total Registros:</b> ${lineas.length}</div>
       <div class="pie">
         <span>${pagina}/${totalPaginas} · PDF generado con CEM-Despachos</span>
         <span>Pollocoa · ${year}</span>
