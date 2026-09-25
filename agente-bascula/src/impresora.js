@@ -3,7 +3,7 @@ import net from "net";
 const txt = (v) => String(v ?? "").trim();
 
 export const configImpresora = () => ({
-  ip: txt(process.env.TSC_IMPRESORA_IP) || "192.168.1.35",
+  ip: txt(process.env.TSC_IMPRESORA_IP) || "192.168.1.36",
   puerto: Number(process.env.TSC_IMPRESORA_PUERTO) || 9100,
   timeoutMs: Number(process.env.TSC_IMPRESORA_TIMEOUT_MS) || 8000,
 });

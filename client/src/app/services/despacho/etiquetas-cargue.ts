@@ -22,11 +22,15 @@ export type EtiquetaCanasta = {
   producto: string;
   plu: string;
   pesoKg: string;
+  /** Unidades del pesaje (etiqueta básica). */
+  unidades: string;
+  /** Lote del pesaje (etiqueta básica). */
+  lote: string;
   codigoDep: string;
   dependencia: string;
   zona: string;
   cadena: string;
-  /** Layout banderín Éxito (DEP grande). */
+  /** Layout banderín Éxito (DEP grande). Solo Almacenes Éxito. */
   estiloExito: boolean;
 };
 
@@ -114,13 +118,29 @@ const pesoKgDeLinea = (linea: any = {}) => {
   return pesoKgDe(ultimo?.pNeto ?? ultimo?.peso ?? linea?.pd ?? linea?.kilo);
 };
 
-/** Producto/PLU: línea actual del pesaje, o la primera con pesaje, o la primera del doc. */
+const unidadesDeLinea = (linea: any = {}) => {
+  const pesajes = Array.isArray(linea?.pesajes) ? linea.pesajes : [];
+  const ultimo = pesajes[pesajes.length - 1];
+  const n = Number(ultimo?.unidades ?? linea?.cd ?? linea?.unidades);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return String(Math.round(n * 100) / 100);
+};
+
+const loteDeLinea = (linea: any = {}) => {
+  const pesajes = Array.isArray(linea?.pesajes) ? linea.pesajes : [];
+  const ultimo = pesajes[pesajes.length - 1];
+  return txt(ultimo?.lote || linea?.lote);
+};
+
+/** Producto/PLU/peso/und/lote: línea actual del pesaje, o la primera con pesaje, o la primera del doc. */
 export const productoPluDeDoc = (doc: any = {}, linea?: any) => {
-  if (linea && (productoDeLinea(linea) || pluDeLinea(linea))) {
+  if (linea && (productoDeLinea(linea) || pluDeLinea(linea) || pesoKgDeLinea(linea))) {
     return {
       producto: productoDeLinea(linea),
       plu: pluDeLinea(linea),
       pesoKg: pesoKgDeLinea(linea),
+      unidades: unidadesDeLinea(linea),
+      lote: loteDeLinea(linea),
     };
   }
   const lineas = Array.isArray(doc.lineas) ? doc.lineas : [];
@@ -130,6 +150,8 @@ export const productoPluDeDoc = (doc: any = {}, linea?: any) => {
     producto: productoDeLinea(elegida),
     plu: pluDeLinea(elegida),
     pesoKg: pesoKgDeLinea(elegida),
+    unidades: unidadesDeLinea(elegida),
+    lote: loteDeLinea(elegida),
   };
 };
 
@@ -226,7 +248,7 @@ export const armarEtiquetasCanasta = (
   const documentoRef = documentoRefDe(doc);
   const loadName = loadNameDeDoc(doc);
   const stateProduct = estadoFrioDeDoc(doc);
-  const { producto, plu, pesoKg } = productoPluDeDoc(doc, opts.linea);
+  const { producto, plu, pesoKg, unidades, lote } = productoPluDeDoc(doc, opts.linea);
   const { codigoDep, dependencia, zona, cadena } = localizacionDeDoc(doc);
   const estiloExito = esClienteExito(doc, { cadena, dependencia });
   const porNum = new Map(
@@ -259,6 +281,8 @@ export const armarEtiquetasCanasta = (
       producto: producto || cliente || "SIN PRODUCTO",
       plu,
       pesoKg: pesoKg || "",
+      unidades: unidades || "",
+      lote: lote || "",
       codigoDep,
       dependencia: dependencia || cliente,
       zona,
@@ -331,6 +355,13 @@ const cssEtiquetas = `
   }
   .dep{font-size:26px;font-weight:900;line-height:1;letter-spacing:.02em}
   .etiq--exito .qr{width:48mm;height:48mm;flex:none}
+  .etiq--basica{align-items:stretch;padding:3mm 5mm 3mm 10mm;gap:5mm}
+  .etiq--basica .izq{gap:1.5mm}
+  .etiq--basica .cliente{
+    font-size:18px;font-weight:800;line-height:1.05;text-transform:uppercase;
+  }
+  .etiq--basica .dato{font-size:13px;font-weight:700;line-height:1.2}
+  .etiq--basica .qr{width:40mm;height:40mm;flex:none}
 `;
 
 const logoPollocoa = () =>
@@ -354,26 +385,22 @@ const htmlEtiquetaExito = (e: EtiquetaCanasta) => `<section class="etiq etiq--ex
   </div>
 </section>`;
 
-const htmlEtiquetaGeneral = (e: EtiquetaCanasta) => `<section class="etiq">
-  <div class="bloque">
-    <div class="lado"><span>${esc(e.cliente || "SIN CLIENTE")}</span></div>
-    <div class="titulo">${esc(e.cliente || "SIN CLIENTE")}</div>
-    <div class="datos">
-      Referencia: ${esc(e.documentoRef)}<br/>
-      ${esc(e.loadName)}<br/>
-      ${esc(e.stateProduct)}<br/>
-      ${esc(e.codigo)}
-    </div>
+/** Etiqueta básica (clientes distintos de Éxito): cliente, producto, peso, und, lote. */
+const htmlEtiquetaBasica = (e: EtiquetaCanasta) => `<section class="etiq etiq--basica">
+  <div class="izq">
+    <div class="cliente">${esc(e.cliente || "SIN CLIENTE")}</div>
+    <div class="dato">${esc(e.producto || "SIN PRODUCTO")}</div>
+    <div class="dato">${e.pesoKg ? `Peso: ${esc(e.pesoKg)}` : ""}</div>
+    <div class="dato">${e.unidades ? `Und: ${esc(e.unidades)}` : ""}</div>
+    <div class="dato">${e.lote ? `Lote: ${esc(e.lote)}` : ""}</div>
   </div>
-  <div class="qr">${qrSvg(e.codigo)}</div>
-  <div class="logo">
-    <img src="${esc(logoPollocoa())}" alt="pollocoa" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
-    <div class="logo-fallo">pollocoa</div>
+  <div class="der">
+    <div class="qr">${qrSvg(e.codigo)}</div>
   </div>
 </section>`;
 
 const htmlEtiqueta = (e: EtiquetaCanasta) =>
-  e.estiloExito ? htmlEtiquetaExito(e) : htmlEtiquetaGeneral(e);
+  e.estiloExito ? htmlEtiquetaExito(e) : htmlEtiquetaBasica(e);
 
 export const imprimirEtiquetasCanasta = (
   doc: any,
@@ -483,12 +510,11 @@ const enviarTsplBanderines = async (
               }
             : {
                 estiloExito: false,
-                productLongName: e.cliente || "SIN CLIENTE",
-                referencia: e.documentoRef,
-                loadName: e.loadName,
-                stateProduct: e.stateProduct,
-                consecutive: e.codigo,
+                productLongName: e.producto || "SIN PRODUCTO",
                 enterpriseClientName: e.cliente || "SIN CLIENTE",
+                pesoKg: e.pesoKg,
+                unidades: e.unidades,
+                lote: e.lote,
                 barcode: e.codigo,
               },
           bitmapHija

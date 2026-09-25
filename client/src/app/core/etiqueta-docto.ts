@@ -17,7 +17,19 @@ export function etiquetaDocto(tipo?: unknown, nro?: unknown): string {
 }
 
 export function etiquetaPedido(row: any = {}): string {
-  const nro = row.idEnc || row.nroDoc || row.pedidoIdEnc || row.NumPedido || "";
+  const nro = String(row.idEnc || row.nroDoc || row.pedidoIdEnc || row.NumPedido || "").trim();
   const tipoSiesa = row.tipoDocto || row.tipoDocPedido || row.tipo_docto || "";
+  // OC madre#PDV → "OC 0020106507 · 262-EXITO…"
+  if (nro.includes("#") && String(tipoSiesa || row.tipo || "").toUpperCase().includes("OC")) {
+    const [madre, gln] = nro.split("#");
+    const nroOc = madre.replace(/^OC-?/i, "");
+    const pdv =
+      row.cliente ||
+      row.nombreEstablecimiento ||
+      row.codigoDep ||
+      row.codigoEstablecimiento ||
+      gln;
+    return `OC ${nroOc} · ${pdv}`;
+  }
   return etiquetaDocto(tipoSiesa, nro) || txt(nro);
 }

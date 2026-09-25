@@ -130,11 +130,13 @@ export async function confirmarRepesar(texto: string): Promise<boolean> {
 }
 
 export function mensajePesoInvalido(peso: number | null, tara = 0): string {
-  if (peso == null || !Number.isFinite(Number(peso))) return "Indique el peso.";
+  if (peso == null || !Number.isFinite(Number(peso))) {
+    return "Sin peso de la báscula. El peso no se digita a mano.";
+  }
   const p = Number(peso);
   const t = Number(tara) || 0;
   if (p < 0) return "El peso no puede ser negativo.";
-  if (!(p > 1)) return "El peso debe ser mayor a 1 kg.";
+  if (!(p > 1)) return "El peso de la báscula debe ser mayor a 1 kg.";
   if (t < 0) return "La tara no puede ser negativa.";
   if (p - t < 0) return "El peso neto no puede ser negativo. La tara es mayor que el peso.";
   return "";

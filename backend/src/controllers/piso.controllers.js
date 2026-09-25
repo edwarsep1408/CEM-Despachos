@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import carguesModel from "../models/cargues.models";
 import pedidosModel from "../models/pedidos.models";
 import reaproModel from "../models/reaprovisionamientos.models";
+import ordenesModel from "../models/ordenesCompra.models";
 import siesaPedidos from "../services/siesaPedidos.servicios";
 import {
   num,
@@ -21,6 +22,7 @@ import {
   vidaUtilDeProducto,
 } from "../services/vidaUtil.servicios";
 import { resolverLocalizacionParaDoc } from "./localizaciones.controllers";
+import { snapshotsOcDespacho, idEncOcMadreDe } from "./ordenesCompra.controllers";
 
 const pisoCtr = {};
 
@@ -118,9 +120,83 @@ const completarCabecera = async (doc) => {
   return doc;
 };
 
+const esDocOc = (doc) => {
+  const t = String(doc?.tipo || doc?.tipoDoc || "").toUpperCase();
+  return t === "OC" || t.includes("COMPRA") || t === "ORDEN";
+};
+
+const docTienePesaje = (doc) =>
+  (doc.lineas || []).some((l) => Array.isArray(l.pesajes) && l.pesajes.length > 0);
+
+/** OC agregada antes de la separación por PDV → expandir a 1 doc por tienda. */
+const expandirOcMadreEnDocumentos = async (doc) => {
+  if (!esDocOc(doc) || String(doc.idEnc || "").includes("#") || docTienePesaje(doc)) {
+    return null;
+  }
+  const madreId = idEncOcMadreDe(doc.idEnc);
+  const nro = String(doc.nroDoc || madreId || "")
+    .replace(/^OC-?/i, "")
+    .trim();
+  const oc = await ordenesModel
+    .findOne({
+      $or: [{ idEnc: madreId }, ...(nro ? [{ nroPedido: nro }] : [])],
+    })
+    .lean();
+  const tieneHijos =
+    Boolean(oc?.tieneHijos) ||
+    oc?.estructura === "madre-hijos" ||
+    (oc?.lineas || []).some((l) => Array.isArray(l?.hijos) && l.hijos.length);
+  if (!oc || !tieneHijos) return null;
+  const snaps = snapshotsOcDespacho(oc);
+  if (snaps.length <= 1) return null;
+  return snaps.map((snap) => ({
+    tipo: snap.tipo,
+    tipoDoc: snap.tipoDoc,
+    idEnc: snap.idEnc,
+    nroDoc: snap.nroDoc,
+    tipoDocto: snap.tipoDocto,
+    nit: snap.nit,
+    fecha: snap.fecha,
+    sucursal: snap.sucursal,
+    municipio: snap.municipio || "",
+    barrio: snap.barrio || "",
+    cndPago: snap.cndPago || "",
+    direccion: snap.direccion || "",
+    vendedor: snap.vendedor || "",
+    codigo: snap.codigo || "",
+    codigoCliente: snap.codigoCliente || "",
+    observacion: snap.observacion || "",
+    contacto: snap.contacto || "",
+    telefono: snap.telefono || "",
+    valor: snap.valor,
+    peso: snap.peso,
+    cliente: snap.cliente,
+    establecimiento: snap.establecimiento || snap.cliente || "",
+    hora: snap.hora || "",
+    bodega: snap.bodega,
+    unidades: snap.unidades || 0,
+    gln: snap.gln || snap.glnEntrega || "",
+    codigoDep: snap.codigoDep || snap.codigoEstablecimiento || "",
+    codigoEstablecimiento: snap.codigoEstablecimiento || snap.codigoDep || "",
+    dependencia: snap.dependencia || snap.nombreEstablecimiento || "",
+    zona: snap.zona || "",
+    cadena: snap.cadena || snap.razonSocial || "",
+    omitido: false,
+    estadoDespacho: "PEND",
+    lineas: (snap.lineas || []).map(normalizarLineaPiso),
+  }));
+};
+
 export const hidratarCargue = async (cargue) => {
   let cambio = false;
+  const docsNuevos = [];
   for (const doc of cargue.documentos || []) {
+    const expandido = await expandirOcMadreEnDocumentos(doc);
+    if (expandido?.length) {
+      docsNuevos.push(...expandido);
+      cambio = true;
+      continue;
+    }
     const antes = `${doc.establecimiento || ""}|${doc.hora || ""}|${doc.direccion || ""}|${doc.tipoDocto || ""}|${doc.observacion || ""}`;
     await completarCabecera(doc);
     const despues = `${doc.establecimiento || ""}|${doc.hora || ""}|${doc.direccion || ""}|${doc.tipoDocto || ""}|${doc.observacion || ""}`;
@@ -131,8 +207,10 @@ export const hidratarCargue = async (cargue) => {
     } else {
       doc.lineas = (doc.lineas || []).map(normalizarLineaPiso);
     }
+    docsNuevos.push(doc);
   }
   if (cambio) {
+    cargue.documentos = docsNuevos;
     cargue.markModified("documentos");
     cargue.fecha_actualizacion = new Date();
     await cargue.save();

@@ -13,6 +13,11 @@ export class OrdenesCompraService {
     estado?: string;
     desde?: string;
     hasta?: string;
+    id?: string;
+    numOrden?: string;
+    bodega?: string;
+    cliente?: string;
+    localizacion?: string;
     q?: string;
   }): Observable<any> {
     let params = new HttpParams();

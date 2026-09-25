@@ -50,7 +50,6 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
   conectando = false;
   errorBascula = "";
   pesoVivoNum: number | null = null;
-  pesoManual: number | null = null;
   private socketSubs: Subscription[] = [];
   private reintento?: ReturnType<typeof setTimeout>;
   private cerrado = false;
@@ -85,8 +84,8 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Solo lectura de báscula; nunca se digita a mano. */
   get pesoVivo(): number | null {
-    if (this.pesoManual != null) return this.pesoManual;
     return this.pesoVivoNum;
   }
 
@@ -245,7 +244,6 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
     }
     if (typeof estado.peso === "number" && Number.isFinite(estado.peso)) {
       this.pesoVivoNum = estado.peso;
-      this.pesoManual = null;
       this.conectado = true;
       this.errorBascula = "";
     } else if (estado.conectado) {
@@ -299,7 +297,6 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
             const peso = Number(msg?.peso);
             if (Number.isFinite(peso)) {
               this.pesoVivoNum = peso;
-              this.pesoManual = null;
               this.conectado = true;
               this.errorBascula = "";
             }
@@ -457,31 +454,6 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
     if (r.isConfirmed) this.temperatura = formatearTemperatura(r.value) || "";
   }
 
-  async pedirPesoManual() {
-    const r = await Swal.fire({
-      title: "Peso (kg)",
-      input: "number",
-      inputValue: this.pesoVivo != null && this.pesoVivo >= 0 ? this.pesoVivo : "",
-      inputAttributes: { min: "0", step: "0.1" },
-      inputValidator: (value) => {
-        const n = Number(value);
-        if (!Number.isFinite(n)) return "Indique el peso.";
-        if (n < 0) return "El peso no puede ser negativo.";
-        if (!(n > 1)) return "El peso debe ser mayor a 1 kg.";
-        return null;
-      },
-      showCancelButton: true,
-      confirmButtonText: "Aceptar",
-    });
-    if (!r.isConfirmed) return;
-    const n = Number(r.value);
-    if (!Number.isFinite(n) || n < 0) {
-      Swal.fire({ icon: "warning", title: "El peso no puede ser negativo." });
-      return;
-    }
-    if (n > 1) this.pesoManual = n;
-  }
-
   private faltantesRegistro(peso: number | null): string[] {
     const faltan: string[] = [];
     const loteOk = !!String(this.lote || "").trim() && this.lote !== "0";
@@ -489,7 +461,8 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
     if (!(this.taraTotal > 0)) faltan.push("tara");
     if (!(Number(this.unidadesCap) > 0)) faltan.push("unidades");
     if (!formatearTemperatura(this.temperatura)) faltan.push("temperatura con un decimal (ej. 4.0)");
-    if (peso == null || !(peso > 1)) faltan.push("peso mayor a 1 kg");
+    if (!this.conectado) faltan.push("báscula conectada");
+    if (peso == null || !(peso > 1)) faltan.push("peso de la báscula (mayor a 1 kg)");
     return faltan;
   }
 
@@ -521,14 +494,26 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
       Swal.fire({ icon: "warning", title: "Las unidades no pueden ser negativas." });
       return;
     }
-    let peso = this.pesoVivo;
-    if (peso != null && peso < 0) {
-      Swal.fire({ icon: "warning", title: "El peso no puede ser negativo." });
+    if (!this.conectado) {
+      Swal.fire({
+        icon: "warning",
+        title: "Sin báscula",
+        text: "Conecte la báscula. El peso no se digita a mano.",
+      });
       return;
     }
+    const peso = this.pesoVivo;
     if (peso == null || !(peso > 1)) {
-      await this.pedirPesoManual();
-      peso = this.pesoVivo;
+      Swal.fire({
+        icon: "warning",
+        title: "Sin peso de la báscula",
+        text: "Espere a que la báscula capture un peso mayor a 1 kg. No se permite digitar el peso.",
+      });
+      return;
+    }
+    if (peso < 0) {
+      Swal.fire({ icon: "warning", title: "El peso no puede ser negativo." });
+      return;
     }
     const invalid = mensajePesoInvalido(peso, this.taraTotal);
     if (invalid) {
@@ -565,7 +550,6 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
           this.linea = res?.body?.linea || this.linea;
           this.doc = res?.body?.documento || this.doc;
           this.resetTaras();
-          this.pesoManual = null;
           if (canastasPesaje > 0 && this.doc) {
             const ultimo = (this.linea?.pesajes || [])[(this.linea?.pesajes || []).length - 1];
             const resImp = await imprimirEtiquetasDePesaje(this.doc, canastasPesaje, {
@@ -641,7 +625,6 @@ export class PortalPesarComponent implements OnInit, OnDestroy {
         this.doc = res?.body || this.doc;
         this.linea = (this.doc?.lineas || []).find((l: any) => String(l.idLinea) === this.lineaId) || this.linea;
         this.resetTaras();
-        this.pesoManual = null;
       },
       error: (err) =>
         Swal.fire({ icon: "error", title: mensajeApi(err, "No se pudo volver a pesar.") }),

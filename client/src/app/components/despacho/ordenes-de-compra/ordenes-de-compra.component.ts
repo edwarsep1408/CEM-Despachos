@@ -12,7 +12,12 @@ import Swal from "sweetalert2";
   standalone: true,
   imports: [CommonModule, FormsModule, MaterialModule],
   templateUrl: "./ordenes-de-compra.component.html",
-  styleUrls: ["../despacho-page.css", "../cargues/cargues.component.css"],
+  styleUrls: [
+    "../despacho-page.css",
+    "../cargues/cargues.component.css",
+    "../hojas-de-ruta/hojas-de-ruta.component.css",
+    "./ordenes-de-compra.component.css",
+  ],
 })
 export class OrdenesDeCompraComponent implements OnInit {
   cargando = true;
@@ -23,7 +28,19 @@ export class OrdenesDeCompraComponent implements OnInit {
   seleccion = new Set<string>();
   bodegas: { codigo: string; nombre: string }[] = [];
   bodegaOrigen = "";
-  filtros = { estado: "aprobado", desde: "", hasta: "", q: "" };
+  pagina = 1;
+  porPagina = 20;
+  readonly porPaginaOpciones = [10, 20, 50];
+  filtros = {
+    estado: "aprobado",
+    desde: "",
+    hasta: "",
+    id: "",
+    numOrden: "",
+    bodega: "",
+    cliente: "",
+    localizacion: "",
+  };
 
   constructor(
     private oc: OrdenesCompraService,
@@ -39,8 +56,41 @@ export class OrdenesDeCompraComponent implements OnInit {
     return this.seleccion.size;
   }
 
+  get totalPaginas() {
+    return Math.max(1, Math.ceil(this.filas.length / this.porPagina));
+  }
+
+  get filasPagina() {
+    const inicio = (this.pagina - 1) * this.porPagina;
+    return this.filas.slice(inicio, inicio + this.porPagina);
+  }
+
+  irPagina(pagina: number) {
+    this.pagina = Math.min(this.totalPaginas, Math.max(1, pagina));
+  }
+
+  cambiarPorPagina() {
+    this.pagina = 1;
+  }
+
+  limpiarFiltros() {
+    this.filtros = {
+      estado: "aprobado",
+      desde: "",
+      hasta: "",
+      id: "",
+      numOrden: "",
+      bodega: "",
+      cliente: "",
+      localizacion: "",
+    };
+    this.pagina = 1;
+    this.cargar();
+  }
+
   cargar() {
     this.cargando = true;
+    this.pagina = 1;
     this.oc.listar(this.filtros).subscribe({
       next: (res) => {
         this.filas = res.body || [];
@@ -249,12 +299,18 @@ export class OrdenesDeCompraComponent implements OnInit {
           pdv.nombreEstablecimiento = String(h.nombreEstablecimiento).trim();
         }
         const undRaw = String(h.unidad || lin.unidadPedido || "NAR").toUpperCase();
-        const esKg = undRaw === "KGM" || undRaw === "KG" || undRaw === "KGS";
+        const ean = String(lin.ean || "").trim();
+        // Iventas: KGM del HSE, o EAN de peso variable (prefijo 2) → columna KILO
+        const esKg =
+          undRaw === "KGM" ||
+          undRaw === "KG" ||
+          undRaw === "KGS" ||
+          /^2\d{12}$/.test(ean);
         const cant = Number(h.cantidad) || 0;
         pdv.lineas.push({
           ...lin,
           cantidad: cant,
-          unidadPedido: undRaw,
+          unidadPedido: esKg ? "KGM" : undRaw,
           unidadPedidoEtiqueta: esKg ? "KG" : lin.unidadPedidoEtiqueta || "UND",
           kilos: esKg ? cant : Number(lin.kilos) || 0,
           unidades: esKg ? 0 : cant,
@@ -272,7 +328,8 @@ export class OrdenesDeCompraComponent implements OnInit {
     const cediGln = oc.glnCedi || (oc.tieneHijos ? oc.glnEntrega : "") || "";
 
     return [...porGln.values()].map((pdv) => {
-      const cod = pdv.codigoEstablecimiento;
+      let cod = pdv.codigoEstablecimiento;
+      if (/^\d+$/.test(cod) && cod.length < 3) cod = cod.padStart(3, "0");
       const nom = pdv.nombreEstablecimiento;
       const est = cod && nom ? `${cod}-${nom}` : nom || cod || "—";
       return {

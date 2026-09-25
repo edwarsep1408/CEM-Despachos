@@ -182,34 +182,67 @@ const puntosVentaDe = async (glnsHijos = [], cacheGln = null) => {
 };
 
 export const snapshotOc = (doc) => {
-  const lineas = (doc.lineas || []).map((linea) => {
-    const undPed = linea.unidadPedidoEtiqueta || etiquetaUnidadPedido(linea.unidadPedido) || "UND";
-    const cantidad = Number(linea.cantidad) || 0;
-    const esKg = String(undPed).toUpperCase() === "KG";
-    return {
-      item: linea.item || "",
-      codigoItem: linea.codigoItem || "",
-      referencia: linea.referencia || linea.codigoComprador || linea.ean || "",
-      descripcion: linea.descripcion || "",
-      undInventario: linea.undInventario || "",
-      unidadPedido: linea.unidadPedido || "",
-      unidadPedidoEtiqueta: undPed,
-      cantidad,
-      cant1: esKg ? 0 : cantidad || Number(linea.unidades) || 0,
-      cant2: esKg ? cantidad || Number(linea.kilos) || 0 : Number(linea.kilos) || 0,
-      kilo: esKg ? cantidad || Number(linea.kilos) || 0 : Number(linea.kilos) || 0,
-      unidades: esKg ? 0 : cantidad || Number(linea.unidades) || 0,
-      kilos: esKg ? cantidad || Number(linea.kilos) || 0 : Number(linea.kilos) || 0,
-      ean: linea.ean || "",
-      codigoComprador: linea.codigoComprador || "",
-      precio: Number(linea.precio) || 0,
-    };
+  const lineas = (doc.lineas || []).map((linea) => lineaOcASnap(linea));
+  return armarSnapOc(doc, {
+    idEnc: String(doc.idEnc || ""),
+    glnEntrega: doc.glnEntrega || doc.glnComprador || "",
+    nombreEstablecimiento: doc.nombreEstablecimiento || "",
+    codigoEstablecimiento: doc.codigoEstablecimiento || doc.codigoDep || "",
+    razonSocial: doc.razonSocial || "",
+    codigoDep: doc.codigoDep || doc.codigoEstablecimiento || "",
+    dependencia: doc.dependencia || doc.nombreEstablecimiento || "",
+    zona: doc.zona || "",
+    cadena: doc.cadena || doc.razonSocial || "",
+    lineas,
   });
-  const entrega = doc.glnEntrega || doc.glnComprador || "";
-  const tienda = doc.nombreEstablecimiento || "";
+};
+
+const lineaOcASnap = (linea, override = null) => {
+  const undPed =
+    override?.unidadPedidoEtiqueta ||
+    linea.unidadPedidoEtiqueta ||
+    etiquetaUnidadPedido(override?.unidad || linea.unidadPedido) ||
+    "UND";
+  const ean = String(linea.ean || "").trim();
+  const cantidad =
+    override?.cantidad != null ? Number(override.cantidad) || 0 : Number(linea.cantidad) || 0;
+  const esKg =
+    String(undPed).toUpperCase() === "KG" ||
+    String(undPed).toUpperCase() === "KGM" ||
+    /^2\d{12}$/.test(ean);
+  return {
+    item: linea.item || "",
+    codigoItem: linea.codigoItem || "",
+    referencia: linea.referencia || linea.codigoComprador || linea.ean || "",
+    descripcion: linea.descripcion || "",
+    undInventario: linea.undInventario || "",
+    unidadPedido: esKg ? "KGM" : override?.unidad || linea.unidadPedido || "",
+    unidadPedidoEtiqueta: esKg ? "KG" : undPed,
+    cantidad,
+    cant1: esKg ? 0 : cantidad || Number(linea.unidades) || 0,
+    cant2: esKg ? cantidad : Number(linea.kilos) || 0,
+    kilo: esKg ? cantidad : Number(linea.kilos) || 0,
+    unidades: esKg ? 0 : cantidad || Number(linea.unidades) || 0,
+    kilos: esKg ? cantidad : Number(linea.kilos) || 0,
+    ean,
+    codigoComprador: linea.codigoComprador || "",
+    precio: Number(linea.precio) || 0,
+  };
+};
+
+const armarSnapOc = (doc, opts) => {
+  const lineas = opts.lineas || [];
+  const entrega = opts.glnEntrega || "";
+  const tienda = opts.nombreEstablecimiento || "";
+  const cod = opts.codigoEstablecimiento || opts.codigoDep || "";
+  const etiquetaTienda = cod && tienda ? `${cod}-${tienda}` : tienda || cod || entrega;
   const totalUnd = lineas.reduce((acc, l) => acc + (Number(l.unidades) || 0), 0);
   const totalKg = lineas.reduce((acc, l) => acc + (Number(l.kilos) || 0), 0);
   const totalCant = lineas.reduce((acc, l) => acc + (Number(l.cantidad) || 0), 0);
+  const valorLineas = lineas.reduce(
+    (acc, l) => acc + (Number(l.precio) || 0) * (Number(l.cantidad) || 0),
+    0
+  );
   const productosResumen = lineas
     .slice(0, 4)
     .map((l) => {
@@ -220,20 +253,25 @@ export const snapshotOc = (doc) => {
     })
     .join(" · ");
   const mas = lineas.length > 4 ? ` · +${lineas.length - 4} más` : "";
+  const cedi = String(doc.nombreEstablecimiento || doc.codigoEstablecimiento || "").trim();
+  const obsBase = String(doc.observacion || "").trim();
+  const obsCedi =
+    opts.esPdv && cedi ? `CEDI ${cedi}${obsBase ? ` · ${obsBase}` : ""}` : obsBase;
   return {
     tipo: "OC",
     tipoDoc: "ORDEN DE COMPRA",
-    idEnc: String(doc.idEnc || ""),
+    idEnc: String(opts.idEnc || ""),
+    idEncMadre: String(opts.idEncMadre || doc.idEnc || ""),
     nroDoc: String(doc.nroPedido || doc.idEnc || ""),
     tipoDocto: "OC",
     nit: entrega,
-    codigoCliente: doc.codigoEstablecimiento || entrega,
+    codigoCliente: cod || entrega,
     codigo: doc.glnComprador || "",
-    observacion: doc.observacion || "",
+    observacion: obsCedi,
     fecha: doc.fecha || "",
     fechaEntregaDesde: doc.fechaEntregaDesde || "",
     fechaEntregaHasta: doc.fechaEntregaHasta || "",
-    sucursal: tienda || entrega,
+    sucursal: etiquetaTienda || entrega,
     municipio: "",
     barrio: "",
     cndPago: doc.pagoDias != null ? String(doc.pagoDias) : "",
@@ -241,29 +279,105 @@ export const snapshotOc = (doc) => {
     vendedor: "",
     contacto: "",
     telefono: "",
-    valor: Number(doc.valor) || 0,
-    peso: Number(doc.peso) || totalKg,
-    unidades: Number(doc.unidades) || totalUnd || totalCant,
+    valor: valorLineas || Number(doc.valor) || 0,
+    peso: totalKg,
+    unidades: totalUnd || totalCant,
     cantidad: totalCant,
-    unidadesPedido: [...new Set(lineas.map((l) => l.unidadPedidoEtiqueta).filter(Boolean))].join(", "),
+    unidadesPedido: [...new Set(lineas.map((l) => l.unidadPedidoEtiqueta).filter(Boolean))].join(
+      ", "
+    ),
     productosResumen: (productosResumen + mas).trim(),
     totalLineas: lineas.length,
     glnEntrega: entrega,
-    razonSocial: doc.razonSocial || "",
-    nombreEstablecimiento: tienda,
-    codigoEstablecimiento: doc.codigoEstablecimiento || "",
-    cliente: tienda || `OC ${doc.nroPedido || ""}`.trim(),
-    establecimiento: tienda || entrega,
-    codigoDep: doc.codigoDep || doc.codigoEstablecimiento || "",
-    dependencia: doc.dependencia || tienda || "",
-    zona: doc.zona || "",
+    razonSocial: opts.razonSocial || doc.razonSocial || "",
+    nombreEstablecimiento: etiquetaTienda,
+    codigoEstablecimiento: cod,
+    cliente: etiquetaTienda || `OC ${doc.nroPedido || ""}`.trim(),
+    establecimiento: etiquetaTienda || entrega,
+    codigoDep: opts.codigoDep || cod,
+    dependencia: opts.dependencia || tienda || "",
+    zona: opts.zona || doc.zona || "",
     gln: entrega,
-    cadena: doc.cadena || doc.razonSocial || "",
+    cadena: opts.cadena || doc.cadena || doc.razonSocial || "",
     hora: "",
     bodega: doc.bodegaOrigen || "",
     estado: doc.estado || "",
     lineas,
   };
+};
+
+/** idEnc de OC en cargue: `OC-0020…` o `OC-0020…#GLN` (PDV hijo). */
+export const idEncOcMadreDe = (idEnc) => {
+  const s = String(idEnc || "").trim();
+  const i = s.indexOf("#");
+  return i > 0 ? s.slice(0, i) : s;
+};
+
+export const glnOcPdvDe = (idEnc) => {
+  const s = String(idEnc || "").trim();
+  const i = s.indexOf("#");
+  return i > 0 ? s.slice(i + 1).trim() : "";
+};
+
+/**
+ * Una fila pesable por PDV cuando la OC es madre+hijos.
+ * OC simple → un solo snapshot (comportamiento anterior).
+ */
+export const snapshotsOcDespacho = (doc) => {
+  const tieneHijos =
+    Boolean(doc?.tieneHijos) ||
+    doc?.estructura === "madre-hijos" ||
+    (doc?.lineas || []).some((l) => Array.isArray(l?.hijos) && l.hijos.length);
+  if (!tieneHijos) return [snapshotOc(doc)];
+
+  const madreId = String(doc.idEnc || "").trim() || `OC-${String(doc.nroPedido || "").trim()}`;
+  const porGln = new Map();
+  for (const lin of doc.lineas || []) {
+    for (const h of lin.hijos || []) {
+      const gln = String(h?.gln || "").trim();
+      if (!gln) continue;
+      if (!porGln.has(gln)) {
+        porGln.set(gln, {
+          gln,
+          codigoEstablecimiento: String(h.codigoEstablecimiento || "").trim(),
+          nombreEstablecimiento: String(h.nombreEstablecimiento || "").trim(),
+          razonSocial: String(h.razonSocial || doc.razonSocial || "").trim(),
+          lineas: [],
+        });
+      }
+      const pdv = porGln.get(gln);
+      if (!pdv.codigoEstablecimiento && h.codigoEstablecimiento) {
+        pdv.codigoEstablecimiento = String(h.codigoEstablecimiento).trim();
+      }
+      if (!pdv.nombreEstablecimiento && h.nombreEstablecimiento) {
+        pdv.nombreEstablecimiento = String(h.nombreEstablecimiento).trim();
+      }
+      pdv.lineas.push(
+        lineaOcASnap(lin, {
+          cantidad: Number(h.cantidad) || 0,
+          unidad: h.unidad || lin.unidadPedido,
+        })
+      );
+    }
+  }
+  if (!porGln.size) return [snapshotOc(doc)];
+
+  return [...porGln.values()].map((pdv) =>
+    armarSnapOc(doc, {
+      idEnc: `${madreId}#${pdv.gln}`,
+      idEncMadre: madreId,
+      esPdv: true,
+      glnEntrega: pdv.gln,
+      nombreEstablecimiento: pdv.nombreEstablecimiento,
+      codigoEstablecimiento: pdv.codigoEstablecimiento,
+      codigoDep: pdv.codigoEstablecimiento,
+      dependencia: pdv.nombreEstablecimiento,
+      razonSocial: pdv.razonSocial || doc.razonSocial || "",
+      cadena: pdv.razonSocial || doc.cadena || doc.razonSocial || "",
+      zona: doc.zona || "",
+      lineas: pdv.lineas,
+    })
+  );
 };
 
 const resumen = (doc) => {
@@ -288,24 +402,81 @@ ocCtr.listar = async (req, res) => {
     const estado = String(req.query.estado || "").trim().toLowerCase();
     const desde = String(req.query.desde || "").slice(0, 10);
     const hasta = String(req.query.hasta || "").slice(0, 10);
+    const id = String(req.query.id || "").trim();
+    const numOrden = String(req.query.numOrden || req.query.nroPedido || "").trim();
+    const bodega = String(req.query.bodega || req.query.bodegaOrigen || "").trim();
+    const cliente = String(req.query.cliente || "").trim();
+    const localizacion = String(req.query.localizacion || "").trim();
     const q = String(req.query.q || "").trim();
+
+    const escRx = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const filtro = {};
+    const and = [];
+
     if (estado) filtro.estado = estado;
     if (desde || hasta) {
       filtro.fecha = {};
       if (desde) filtro.fecha.$gte = desde;
       if (hasta) filtro.fecha.$lte = hasta;
     }
-    if (q) {
-      filtro.$or = [
-        { nroPedido: new RegExp(q, "i") },
-        { idEnc: new RegExp(q, "i") },
-        { glnEntrega: new RegExp(q, "i") },
-        { nombreEstablecimiento: new RegExp(q, "i") },
-        { razonSocial: new RegExp(q, "i") },
-        { archivoNombre: new RegExp(q, "i") },
-      ];
+    if (bodega) filtro.bodegaOrigen = new RegExp(`^${escRx(bodega)}$`, "i");
+    if (id) {
+      const rx = new RegExp(escRx(id), "i");
+      const orId = [{ idEnc: rx }, { nroPedido: rx }];
+      if (/^\d+$/.test(id)) orId.push({ idOc: Number(id) });
+      and.push({ $or: orId });
     }
+    if (numOrden) {
+      and.push({
+        $or: [
+          { nroPedido: new RegExp(escRx(numOrden), "i") },
+          { idEnc: new RegExp(escRx(numOrden), "i") },
+        ],
+      });
+    }
+    if (cliente) {
+      const rx = new RegExp(escRx(cliente), "i");
+      and.push({
+        $or: [
+          { razonSocial: rx },
+          { nombreEstablecimiento: rx },
+          { cadena: rx },
+          { dependencia: rx },
+          { "puntosVenta.razonSocial": rx },
+          { "puntosVenta.nombreEstablecimiento": rx },
+        ],
+      });
+    }
+    if (localizacion) {
+      const rx = new RegExp(escRx(localizacion), "i");
+      and.push({
+        $or: [
+          { glnEntrega: rx },
+          { glnCedi: rx },
+          { codigoEstablecimiento: rx },
+          { codigoDep: rx },
+          { nombreEstablecimiento: rx },
+          { "puntosVenta.gln": rx },
+          { "puntosVenta.codigoEstablecimiento": rx },
+          { "puntosVenta.nombreEstablecimiento": rx },
+        ],
+      });
+    }
+    if (q) {
+      const rx = new RegExp(escRx(q), "i");
+      and.push({
+        $or: [
+          { nroPedido: rx },
+          { idEnc: rx },
+          { glnEntrega: rx },
+          { nombreEstablecimiento: rx },
+          { razonSocial: rx },
+          { archivoNombre: rx },
+        ],
+      });
+    }
+    if (and.length) filtro.$and = and;
+
     const lista = await ordenesModel.find(filtro).sort({ idOc: -1 }).lean();
     const body = [];
     for (const doc of lista) {

@@ -5,7 +5,7 @@ import reaproModel from "../models/reaprovisionamientos.models";
 import ordenesModel from "../models/ordenesCompra.models";
 import siesaPedidos from "../services/siesaPedidos.servicios";
 import { snapshotReapro } from "./reaprovisionamientos.controllers";
-import { snapshotOc } from "./ordenesCompra.controllers";
+import { snapshotsOcDespacho, idEncOcMadreDe } from "./ordenesCompra.controllers";
 import { hidratarCargue } from "./piso.controllers";
 import { esUsuarioDespachador } from "./seguridad.controllers";
 import { normalizarLineaPiso, progresoCargue } from "../services/piso.servicios";
@@ -239,17 +239,25 @@ carguesCtr.getDocumentosDisponibles = async (req, res) => {
 
     if (tipo === "OC") {
       const lista = await ordenesModel
-        .find({ estado: { $in: ["aprobado", "temporal"] } })
+        .find({ estado: { $in: ["aprobado", "temporal", "despachando"] } })
         .lean();
-      const body = lista
-        .map(snapshotOc)
-        .filter(
-          (item) =>
-            item.idEnc &&
-            !ocupados.has(item.idEnc) &&
-            mismaBodega(item.bodega, cargue.bodega)
-        )
-        .sort((a, b) => String(b.nroDoc).localeCompare(String(a.nroDoc)));
+      const body = [];
+      for (const oc of lista) {
+        if (!mismaBodega(oc.bodegaOrigen, cargue.bodega)) continue;
+        const snaps = snapshotsOcDespacho(oc);
+        for (const item of snaps) {
+          if (!item.idEnc || ocupados.has(item.idEnc)) continue;
+          // OC antigua agregada entera (sin #PDV): no reabrir PDVs
+          const madre = idEncOcMadreDe(item.idEnc);
+          if (madre !== item.idEnc && ocupados.has(madre)) continue;
+          body.push(item);
+        }
+      }
+      body.sort((a, b) => {
+        const n = String(a.nroDoc).localeCompare(String(b.nroDoc));
+        if (n) return n;
+        return String(a.cliente).localeCompare(String(b.cliente));
+      });
       return ok(res, body);
     }
 
@@ -348,18 +356,31 @@ carguesCtr.agregarDocumentos = async (req, res) => {
         );
       }
     } else if (tipoDoc === "OC") {
-      const docs = await ordenesModel.find({ idEnc: { $in: lista } }).lean();
-      const porId = new Map(docs.map((item) => [String(item.idEnc), item]));
+      const madres = [
+        ...new Set(lista.map((id) => idEncOcMadreDe(id)).filter(Boolean)),
+      ];
+      const docs = await ordenesModel
+        .find({
+          $or: [{ idEnc: { $in: madres } }, { idEnc: { $in: lista } }],
+        })
+        .lean();
+      const snapsPorId = new Map();
+      for (const oc of docs) {
+        for (const snap of snapshotsOcDespacho(oc)) {
+          snapsPorId.set(String(snap.idEnc), { oc, snap });
+        }
+      }
       for (const idEnc of lista) {
         const bloqueo = bloqueoPedidoEnCargue(ocupacion, idEnc, cargue._id);
         if (bloqueo) {
           bloqueados.push(textoOcupado(idEnc, bloqueo));
           continue;
         }
-        const oc = porId.get(idEnc);
-        if (!oc || !["aprobado", "temporal"].includes(oc.estado)) continue;
+        const hit = snapsPorId.get(String(idEnc));
+        if (!hit) continue;
+        const { oc, snap } = hit;
+        if (!oc || !["aprobado", "temporal", "despachando"].includes(oc.estado)) continue;
         if (!mismaBodega(oc.bodegaOrigen, cargue.bodega)) continue;
-        const snap = snapshotOc(oc);
         nuevos.push(documentoDesdeSnap(snap));
         ocupacion.pedidosEnCargues.set(pedidoClave(idEnc), {
           ambito: "cargue",

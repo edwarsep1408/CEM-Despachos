@@ -54,12 +54,16 @@ export const cargarBitmapHija = () => cargarBitmap("hija");
 export const cargarBitmapPadre = () => cargarBitmap("padre");
 
 export type CamposBanderinHija = {
-  /** Nombre del producto (ej. HIGADO GRANEL COA) o cliente en etiqueta general. */
+  /** Nombre del producto (Éxito) o producto (básica). */
   productLongName: string;
   /** PLU / código comprador (solo Éxito). */
   plu?: string;
-  /** Peso con unidad, ej. "12.45 Kg" (solo Éxito). */
+  /** Peso con unidad, ej. "12.45 Kg". */
   pesoKg?: string;
+  /** Unidades del pesaje (etiqueta básica). */
+  unidades?: string;
+  /** Lote del pesaje (etiqueta básica). */
+  lote?: string;
   /** Código Dep de la sede (solo Éxito, grande a la derecha). */
   codigoDep?: string;
   /** Nombre de la dependencia / tienda (solo Éxito). */
@@ -68,12 +72,8 @@ export type CamposBanderinHija = {
   zona?: string;
   /** Código canasta (va en el QR). */
   barcode: string;
-  /** true = layout Éxito (producto/PLU/DEP); false = layout general actual. */
+  /** true = layout Éxito (producto/PLU/DEP); false = básica. */
   estiloExito?: boolean;
-  referencia?: string;
-  loadName?: string;
-  stateProduct?: string;
-  consecutive?: string;
   enterpriseClientName?: string;
 };
 
@@ -96,33 +96,33 @@ const tamanoDep = (dep: string): [number, number] => {
   return [18, 20];
 };
 
-/** Etiqueta hija genérica (pedidos / clientes distintos de Éxito). */
-const tsplBanderinHijaGeneral = (campos: CamposBanderinHija, bitmap: Uint8Array) => {
+/**
+ * Etiqueta hija básica (clientes ≠ Éxito):
+ * cliente, producto, peso, unidades, lote + QR.
+ */
+const tsplBanderinHijaBasica = (campos: CamposBanderinHija, bitmap: Uint8Array) => {
   const partes: Uint8Array[] = [ENC.encode(`${PREAMBULO}\r\n`)];
-  if (bitmap.length) {
-    partes.push(ENC.encode("BITMAP 152,2060,19,336,1,"));
-    partes.push(bitmap);
-    partes.push(ENC.encode("\r\n"));
-  }
-  const qr = escTspl(campos.barcode);
-  const nombre = escTspl(campos.productLongName || campos.enterpriseClientName || "SIN CLIENTE");
-  const cliente = escTspl(campos.enterpriseClientName || nombre);
-  const ref = escTspl(campos.referencia);
-  const load = escTspl(campos.loadName);
-  const estado = escTspl(campos.stateProduct);
-  const consec = escTspl(campos.consecutive || campos.barcode);
+  // Sin logo grande: prioriza datos del pesaje.
+  void bitmap;
+  const qr = escTspl(campos.barcode, 48);
+  const cliente = escTspl(campos.enterpriseClientName || "SIN CLIENTE", 28);
+  const producto = escTspl(campos.productLongName || "SIN PRODUCTO", 30);
+  const peso = escTspl(campos.pesoKg ? `Peso: ${campos.pesoKg}` : "", 22);
+  const und = escTspl(campos.unidades ? `Und: ${campos.unidades}` : "", 18);
+  const lote = escTspl(campos.lote ? `Lote: ${campos.lote}` : "", 22);
   const cmds = [
-    `QRCODE 332,1783,L,10,A,90,M2,S7,"${qr}"`,
     "CODEPAGE 1252",
-    `TEXT 295,959,"0",90,15,16,"Referencia: ${ref}"`,
-    `TEXT 242,959,"0",90,15,16,"${load}"`,
-    `TEXT 189,959,"0",90,15,16,"${estado}"`,
-    `TEXT 136,959,"0",90,15,16,"${consec}"`,
-    `TEXT 436,1079,"0",90,35,36,"${nombre}"`,
-    `TEXT 59,959,"0",90,15,16,"${cliente}"`,
+    `TEXT 400,1100,"0",90,18,20,"${cliente}"`,
+    `TEXT 340,1100,"0",90,14,15,"${producto}"`,
+    peso ? `TEXT 275,1100,"0",90,12,13,"${peso}"` : "",
+    und ? `TEXT 220,1100,"0",90,12,13,"${und}"` : "",
+    lote ? `TEXT 165,1100,"0",90,12,13,"${lote}"` : "",
+    `QRCODE 280,1780,L,11,A,90,M2,S7,"${qr}"`,
     "PRINT 1,1",
     "",
-  ].join("\r\n");
+  ]
+    .filter(Boolean)
+    .join("\r\n");
   partes.push(ENC.encode(cmds));
   return concat(partes);
 };
@@ -171,9 +171,9 @@ const tsplBanderinHijaExito = (campos: CamposBanderinHija, bitmap: Uint8Array) =
   return concat(partes);
 };
 
-/** Etiqueta hija (1 por canasta). Éxito usa layout DEP; el resto el genérico. */
+/** Etiqueta hija (1 por canasta). Éxito = DEP; resto = básica (cliente/producto/peso/und/lote). */
 export const tsplBanderinHija = (campos: CamposBanderinHija, bitmap: Uint8Array) =>
-  campos.estiloExito ? tsplBanderinHijaExito(campos, bitmap) : tsplBanderinHijaGeneral(campos, bitmap);
+  campos.estiloExito ? tsplBanderinHijaExito(campos, bitmap) : tsplBanderinHijaBasica(campos, bitmap);
 
 /** Etiqueta padre (resumen del lote) — plantilla_etiquetapadre_22072026.prn */
 export const tsplBanderinPadre = (campos: CamposBanderinPadre, bitmap: Uint8Array) => {

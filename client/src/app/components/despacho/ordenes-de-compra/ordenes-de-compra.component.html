@@ -29,9 +29,57 @@
     </label>
   </div>
 
-  <div class="hojas-filtros">
-    <label>Estado
-      <select class="form-select form-select-sm" [(ngModel)]="filtros.estado" (ngModelChange)="cargar()">
+  <div class="oc-filtros">
+    <label>Desde
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.desde" />
+    </label>
+    <label>Hasta
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.hasta" />
+    </label>
+    <label>id
+      <input
+        type="text"
+        class="form-control form-control-sm"
+        [(ngModel)]="filtros.id"
+        (keyup.enter)="cargar()"
+        placeholder="OC-… / id interno"
+      />
+    </label>
+    <label>num_orden
+      <input
+        type="text"
+        class="form-control form-control-sm"
+        [(ngModel)]="filtros.numOrden"
+        (keyup.enter)="cargar()"
+        placeholder="0020…"
+      />
+    </label>
+    <label>Bodega
+      <select class="form-select form-select-sm" [(ngModel)]="filtros.bodega">
+        <option value="">Todas</option>
+        <option *ngFor="let b of bodegas" [value]="b.codigo">{{ b.codigo }} — {{ b.nombre }}</option>
+      </select>
+    </label>
+    <label>Cliente
+      <input
+        type="text"
+        class="form-control form-control-sm"
+        [(ngModel)]="filtros.cliente"
+        (keyup.enter)="cargar()"
+        placeholder="Razón social / cadena"
+      />
+    </label>
+    <label>localizacion
+      <input
+        type="text"
+        class="form-control form-control-sm"
+        [(ngModel)]="filtros.localizacion"
+        (keyup.enter)="cargar()"
+        placeholder="GLN / Dep / tienda"
+      />
+    </label>
+    <label>estado
+      <select class="form-select form-select-sm" [(ngModel)]="filtros.estado">
         <option value="aprobado">Aprobadas</option>
         <option value="despachando">En cargue</option>
         <option value="despachado">Despachadas</option>
@@ -39,16 +87,10 @@
         <option value="">Todas</option>
       </select>
     </label>
-    <label>Desde
-      <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.desde" (ngModelChange)="cargar()" />
-    </label>
-    <label>Hasta
-      <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.hasta" (ngModelChange)="cargar()" />
-    </label>
-    <label>Buscar
-      <input type="text" class="form-control form-control-sm" [(ngModel)]="filtros.q" (keyup.enter)="cargar()" placeholder="OC / tienda / GLN" />
-    </label>
-    <button type="button" class="btn btn-sm btn-outline-primary align-self-end" (click)="cargar()">Filtrar</button>
+    <div class="oc-filtros-acciones">
+      <button type="button" class="btn btn-sm btn-outline-primary" (click)="cargar()">Filtrar</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="limpiarFiltros()">Limpiar</button>
+    </div>
   </div>
 
   <div class="hojas-toolbar d-flex flex-wrap align-items-center gap-2">
@@ -72,66 +114,85 @@
   </div>
 
   <div class="mat-elevation-z4" *ngIf="!cargando">
-    <table class="table table-sm mb-0 cargues-tabla">
-      <thead>
-        <tr>
-          <th></th>
-          <th></th>
-          <th>OC</th>
-          <th>NUM ORDEN</th>
-          <th>FECHA</th>
-          <th>ENT. MIN</th>
-          <th>ENT. MAX</th>
-          <th>NOMBRE ESTABLECIMIENTO</th>
-          <th>RAZÓN SOCIAL</th>
-          <th>GLN / LOCALIZACIÓN</th>
-          <th>ESTRUCTURA</th>
-          <th>UND PEDIDO</th>
-          <th>ESTADO</th>
-          <th>BODEGA</th>
-          <th>LÍNEAS</th>
-          <th>VALOR</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let row of filas" [class.is-selected]="seleccion.has(row._id)">
-          <td>
-            <input type="checkbox" [checked]="seleccion.has(row._id)" (change)="toggle(row)" />
-          </td>
-          <td class="acciones-cell">
-            <button type="button" class="btn-link-accion" (click)="ver(row)">[ver]</button>
-            <button
-              type="button"
-              class="btn-link-accion"
-              *ngIf="row.estado !== 'anulado' && row.estado !== 'despachado'"
-              (click)="anular(row)"
-            >[anular]</button>
-          </td>
-          <td>{{ row.idEnc }}</td>
-          <td>{{ row.nroPedido }}</td>
-          <td>{{ row.fecha }}</td>
-          <td>{{ row.fechaEntregaDesde || "—" }}</td>
-          <td>{{ row.fechaEntregaHasta || "—" }}</td>
-          <td>{{ row.nombreEstablecimiento || "—" }}</td>
-          <td>{{ row.razonSocial || "—" }}</td>
-          <td>{{ row.glnEntrega || "—" }}</td>
-          <td>
-            <span *ngIf="row.tieneHijos || row.estructura === 'madre-hijos'; else simpleOc">
-              Madre + {{ row.totalPuntosVenta || row.puntosVenta?.length || 0 }} PDV
-            </span>
-            <ng-template #simpleOc>Simple</ng-template>
-          </td>
-          <td>{{ row.unidadesPedido || "—" }}</td>
-          <td>{{ row.estado }}</td>
-          <td>{{ row.bodegaOrigen }}</td>
-          <td>{{ row.totalLineas }}</td>
-          <td>{{ row.valor | number : "1.0-0" }}</td>
-        </tr>
-        <tr *ngIf="!filas.length">
-          <td colspan="16" class="text-muted py-3">No hay órdenes con esos filtros. Cargue un archivo .hse.</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="oc-tabla-wrap">
+      <table class="table table-sm mb-0 cargues-tabla oc-tabla">
+        <thead>
+          <tr>
+            <th></th>
+            <th></th>
+            <th>OC</th>
+            <th>NUM ORDEN</th>
+            <th>FECHA</th>
+            <th>ENT. MIN</th>
+            <th>ENT. MAX</th>
+            <th>NOMBRE ESTABLECIMIENTO</th>
+            <th>RAZÓN SOCIAL</th>
+            <th>GLN / LOCALIZACIÓN</th>
+            <th>ESTRUCTURA</th>
+            <th>UND PEDIDO</th>
+            <th>ESTADO</th>
+            <th>BODEGA</th>
+            <th>LÍNEAS</th>
+            <th>VALOR</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filasPagina" [class.is-selected]="seleccion.has(row._id)">
+            <td>
+              <input type="checkbox" [checked]="seleccion.has(row._id)" (change)="toggle(row)" />
+            </td>
+            <td class="acciones-cell">
+              <button type="button" class="btn-link-accion" (click)="ver(row)">[ver]</button>
+              <button
+                type="button"
+                class="btn-link-accion"
+                *ngIf="row.estado !== 'anulado' && row.estado !== 'despachado'"
+                (click)="anular(row)"
+              >[anular]</button>
+            </td>
+            <td>{{ row.idEnc }}</td>
+            <td>{{ row.nroPedido }}</td>
+            <td>{{ row.fecha }}</td>
+            <td>{{ row.fechaEntregaDesde || "—" }}</td>
+            <td>{{ row.fechaEntregaHasta || "—" }}</td>
+            <td class="oc-celda-texto">{{ row.nombreEstablecimiento || "—" }}</td>
+            <td class="oc-celda-texto">{{ row.razonSocial || "—" }}</td>
+            <td>{{ row.glnEntrega || "—" }}</td>
+            <td>
+              <span *ngIf="row.tieneHijos || row.estructura === 'madre-hijos'; else simpleOc">
+                Madre + {{ row.totalPuntosVenta || row.puntosVenta?.length || 0 }} PDV
+              </span>
+              <ng-template #simpleOc>Simple</ng-template>
+            </td>
+            <td>{{ row.unidadesPedido || "—" }}</td>
+            <td>{{ row.estado }}</td>
+            <td>{{ row.bodegaOrigen }}</td>
+            <td>{{ row.totalLineas }}</td>
+            <td>{{ row.valor | number : "1.0-0" }}</td>
+          </tr>
+          <tr *ngIf="!filas.length">
+            <td colspan="16" class="text-muted py-3">No hay órdenes con esos filtros. Cargue un archivo .hse.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="oc-paginacion" *ngIf="filas.length">
+      <span>
+        Página {{ pagina }} de {{ totalPaginas }} · {{ filas.length }} registro(s)
+      </span>
+      <div class="oc-paginacion-btns">
+        <label class="mb-0 small">
+          Por página
+          <select class="form-select form-select-sm" [(ngModel)]="porPagina" (ngModelChange)="cambiarPorPagina()">
+            <option *ngFor="let n of porPaginaOpciones" [ngValue]="n">{{ n }}</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(1)" [disabled]="pagina === 1">&lt;&lt;</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(pagina - 1)" [disabled]="pagina === 1">&lt;</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(pagina + 1)" [disabled]="pagina === totalPaginas">&gt;</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="irPagina(totalPaginas)" [disabled]="pagina === totalPaginas">&gt;&gt;</button>
+      </div>
+    </div>
   </div>
 </div>
 
